@@ -14,45 +14,45 @@ use Carbon\Carbon;
 
 class ReportController extends Controller
 {
-    public function generatePurchasedReport(Request $request)
-    {
-        // Validate the date range
-        $request->validate([
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-        ]);
+    // public function generatePurchasedReport(Request $request)
+    // {
+    //     // Validate the date range
+    //     $request->validate([
+    //         'start_date' => 'required|date',
+    //         'end_date' => 'required|date|after_or_equal:start_date',
+    //     ]);
 
-        $startDate = $request->start_date;
-        $endDate = $request->end_date;
+    //     $startDate = $request->start_date;
+    //     $endDate = $request->end_date;
 
-        // Build the base query
-        $query = PurchaseOrder::join('order_items', 'purchase_order.purchase_order_id', '=', 'order_items.purchase_order_id')
-            ->join('product', 'order_items.product_id', '=', 'product.product_id')
-            ->join('order_statuses', 'purchase_order.order_status', '=', 'order_statuses.order_statuses')
-            ->join('order_supplier', 'purchase_order.purchase_order_id', '=' ,'order_supplier.purchase_order_id')
-            ->join('supplier', 'order_supplier.supplier_id', '=', 'supplier.supplier_id')
-            ->join('user', 'user.user_id', '=', 'purchase_order.created_by')
-            ->select('purchase_order.*', 'order_items.*', 'product.*', 'order_statuses.status_name', 'supplier.company_name', 'user.first_name', 'user.last_name')
-            ->with(['order_items.product', 'supplier', 'user', 'status'])
-            ->where('purchase_order.order_status', '=', '3')
-            ->whereBetween('purchase_order.created_at', [$startDate, $endDate])
-            ->distinct();
+    //     // Build the base query
+    //     $query = PurchaseOrder::join('order_items', 'purchase_order.purchase_order_id', '=', 'order_items.purchase_order_id')
+    //         ->join('product', 'order_items.product_id', '=', 'product.product_id')
+    //         ->join('order_statuses', 'purchase_order.order_status', '=', 'order_statuses.order_statuses')
+    //         ->join('order_supplier', 'purchase_order.purchase_order_id', '=' ,'order_supplier.purchase_order_id')
+    //         ->join('supplier', 'order_supplier.supplier_id', '=', 'supplier.supplier_id')
+    //         ->join('user', 'user.user_id', '=', 'purchase_order.created_by')
+    //         ->select('purchase_order.*', 'order_items.*', 'product.*', 'order_statuses.status_name', 'supplier.company_name', 'user.first_name', 'user.last_name')
+    //         ->with(['order_items.product', 'supplier', 'user', 'status'])
+    //         ->where('purchase_order.order_status', '=', '3')
+    //         ->whereBetween('purchase_order.created_at', [$startDate, $endDate])
+    //         ->distinct();
 
-        $orders = $query->get();
+    //     $orders = $query->get();
 
-        // Collect unique products from order items
-        $productJoined = $orders->flatMap(function ($order) {
-            return $order->order_items;
-        })->unique('product_id');
+    //     // Collect unique products from order items
+    //     $productJoined = $orders->flatMap(function ($order) {
+    //         return $order->order_items;
+    //     })->unique('product_id');
 
-        // Set the report title
-        $reportTitle = 'Purchased Products Overview from ' . \Carbon\Carbon::parse($startDate)->format('F j, Y') . ' to ' . \Carbon\Carbon::parse($endDate)->format('F j, Y');
+    //     // Set the report title
+    //     $reportTitle = 'Purchased Products Overview from ' . \Carbon\Carbon::parse($startDate)->format('F j, Y') . ' to ' . \Carbon\Carbon::parse($endDate)->format('F j, Y');
 
-        $signaturePath = null;
+    //     $signaturePath = null;
 
-        // Return the view with the report data
-        return view('report.purchased_filtered_report', compact('orders', 'startDate', 'endDate', 'reportTitle', 'signaturePath'));
-    }
+    //     // Return the view with the report data
+    //     return view('report.purchased_filtered_report', compact('orders', 'startDate', 'endDate', 'reportTitle', 'signaturePath'));
+    // }
 
     public function generatePurchasedFilteredReport(Request $request)
     {
@@ -161,53 +161,53 @@ class ReportController extends Controller
     /**
      * Display the inventory report.
      */
-    public function generateReport(Request $request)
-    {
-        // Validate the date range
-        $request->validate([
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-        ]);
+    // public function generateReport(Request $request)
+    // {
+    //     // Validate the date range
+    //     $request->validate([
+    //         'start_date' => 'required|date',
+    //         'end_date' => 'required|date|after_or_equal:start_date',
+    //     ]);
 
-        $startDate = $request->start_date;
-        $endDate = $request->end_date;
+    //     $startDate = $request->start_date;
+    //     $endDate = $request->end_date;
 
-        // Query to get the inventory report data
-        $inventoryJoined = DB::table('inventory')
-            ->join('product', 'inventory.product_id', '=', 'product.product_id')
-            ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
-            ->join('user', 'stock_transfer.user_id', '=', 'user.user_id')
-            ->join('stockroom', 'stock_transfer.to_stockroom_id', '=', 'stockroom.stockroom_id')
-            ->join('category', 'product.category_id', '=', 'category.category_id')
-            ->join('supplier', 'product.supplier_id', '=', 'supplier.supplier_id')
-            ->select('inventory.*', 'inventory.updated_at as inventory_updated_at', 'product.*', 'category.*', 'supplier.*', 'stock_transfer.*', 'stockroom.*', 'user.*')
-            ->whereBetween(DB::raw('DATE(inventory.updated_at)'), [$startDate, $endDate])
-            ->orderBy('inventory.updated_at', 'desc')
-            ->get('product.product_id');
+    //     // Query to get the inventory report data
+    //     $inventoryJoined = DB::table('inventory')
+    //         ->join('product', 'inventory.product_id', '=', 'product.product_id')
+    //         ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
+    //         ->join('user', 'stock_transfer.user_id', '=', 'user.user_id')
+    //         ->join('stockroom', 'stock_transfer.to_stockroom_id', '=', 'stockroom.stockroom_id')
+    //         ->join('category', 'product.category_id', '=', 'category.category_id')
+    //         ->join('supplier', 'product.supplier_id', '=', 'supplier.supplier_id')
+    //         ->select('inventory.*', 'inventory.updated_at as inventory_updated_at', 'product.*', 'category.*', 'supplier.*', 'stock_transfer.*', 'stockroom.*', 'user.*')
+    //         ->whereBetween(DB::raw('DATE(inventory.updated_at)'), [$startDate, $endDate])
+    //         ->orderBy('inventory.updated_at', 'desc')
+    //         ->get('product.product_id');
 
-        $inventoryItems = $inventoryJoined->unique('product_id');
+    //     $inventoryItems = $inventoryJoined->unique('product_id');
 
-        $stockTransferJoined = DB::table('stock_transfer')
-        ->join('user', 'stock_transfer.user_id', '=', 'user.user_id')
-        // ->join('sales_details', 'stock_transfer.product_id', '=', 'sales_details.product_id')
-        ->select('stock_transfer.*', 'user.*')
-        ->whereBetween(DB::raw('DATE(stock_transfer.transfer_date)'), [$startDate, $endDate])
-        ->orderBy('transfer_date', 'desc')
-        ->get();
+    //     $stockTransferJoined = DB::table('stock_transfer')
+    //     ->join('user', 'stock_transfer.user_id', '=', 'user.user_id')
+    //     // ->join('sales_details', 'stock_transfer.product_id', '=', 'sales_details.product_id')
+    //     ->select('stock_transfer.*', 'user.*')
+    //     ->whereBetween(DB::raw('DATE(stock_transfer.transfer_date)'), [$startDate, $endDate])
+    //     ->orderBy('transfer_date', 'desc')
+    //     ->get();
 
-        // Decode description to array
-        foreach ($inventoryJoined as $item) {
-            $item->descriptionArray = json_decode($item->description, true);
-        }
+    //     // Decode description to array
+    //     foreach ($inventoryJoined as $item) {
+    //         $item->descriptionArray = json_decode($item->description, true);
+    //     }
 
-        // Set the report title
-        $reportTitle = 'Inventory Overview from ' . \Carbon\Carbon::parse($startDate)->format('F j, Y') . ' to ' . \Carbon\Carbon::parse($endDate)->format('F j, Y');
+    //     // Set the report title
+    //     $reportTitle = 'Inventory Overview from ' . \Carbon\Carbon::parse($startDate)->format('F j, Y') . ' to ' . \Carbon\Carbon::parse($endDate)->format('F j, Y');
 
-        $signaturePath = null;
+    //     $signaturePath = null;
 
-        // Return the view with the report data
-        return view('report.filtered_report', compact('inventoryItems', 'startDate', 'endDate', 'stockTransferJoined', 'reportTitle', 'signaturePath'));
-    }
+    //     // Return the view with the report data
+    //     return view('report.filtered_report', compact('inventoryItems', 'startDate', 'endDate', 'stockTransferJoined', 'reportTitle', 'signaturePath'));
+    // }
 
     public function generateFilteredReport(Request $request)
     {
@@ -229,13 +229,13 @@ class ReportController extends Controller
         ->join('user', 'stock_transfer.user_id', '=', 'user.user_id')
         ->join('stockroom', 'stock_transfer.to_stockroom_id', '=', 'stockroom.stockroom_id')
         ->join('category', 'product.category_id', '=', 'category.category_id')
-        ->join('supplier', 'product.supplier_id', '=', 'supplier.supplier_id')
+        // ->join('supplier', 'product_supplier.supplier_id', '=', 'supplier.supplier_id')
         ->select(
             'inventory.*',
             'inventory.updated_at as inventory_updated_at',
             'product.*',
             'category.*',
-            'supplier.*',
+            // 'supplier.*',
             'stock_transfer.*',
             'stockroom.*',
             'user.*'
@@ -256,9 +256,9 @@ class ReportController extends Controller
             $inventoryJoined->whereIn('category.category_id', $categoryIds);
         }
 
-        if ($supplierIds) {
-            $inventoryJoined->whereIn('supplier.supplier_id', $supplierIds);
-        }
+        // if ($supplierIds) {
+        //     $inventoryJoined->whereIn('supplier.supplier_id', $supplierIds);
+        // }
 
         $inventoryJoined = $inventoryJoined->get();
 
@@ -284,9 +284,9 @@ class ReportController extends Controller
         if ($categoryIds) {
             $reportTitleParts[] = 'Product Categories';
         }
-        if ($supplierIds) {
-            $reportTitleParts[] = 'Product Suppliers';
-        }
+        // if ($supplierIds) {
+        //     $reportTitleParts[] = 'Product Suppliers';
+        // }
 
         // Decode description to array
         foreach ($inventoryJoined as $item) {
@@ -311,44 +311,44 @@ class ReportController extends Controller
     /**
      * Display the audit inventory report.
      */
-    public function generateAuditReport(Request $request)
-    {
-        // Validate the date range
-        $request->validate([
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-        ]);
+    // public function generateAuditReport(Request $request)
+    // {
+    //     // Validate the date range
+    //     $request->validate([
+    //         'start_date' => 'required|date',
+    //         'end_date' => 'required|date|after_or_equal:start_date',
+    //     ]);
 
-        $startDate = $request->start_date;
-        $endDate = $request->end_date;
+    //     $startDate = $request->start_date;
+    //     $endDate = $request->end_date;
 
-        $auditLogs = InventoryAudit::with(['inventory', 'user'])
-        ->whereBetween(DB::raw('DATE(audit_date)'), [$startDate, $endDate])
-        ->orderBy('audit_date', 'desc')
-        ->get();
+    //     $auditLogs = InventoryAudit::with(['inventory', 'user'])
+    //     ->whereBetween(DB::raw('DATE(audit_date)'), [$startDate, $endDate])
+    //     ->orderBy('audit_date', 'desc')
+    //     ->get();
 
-        // Extract inventory IDs from the audit logs
-        $inventoryIds = $auditLogs->pluck('inventory_id')->unique();
+    //     // Extract inventory IDs from the audit logs
+    //     $inventoryIds = $auditLogs->pluck('inventory_id')->unique();
 
-        // Query to get the inventory report data
-        $inventoryJoined = DB::table('inventory')
-            ->join('product', 'inventory.product_id', '=', 'product.product_id')
-            ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
-            ->join('stockroom', 'stock_transfer.to_stockroom_id', '=', 'stockroom.stockroom_id')
-            ->join('category', 'product.category_id', '=', 'category.category_id')
-            ->join('supplier', 'product.supplier_id', '=', 'supplier.supplier_id')
-            ->select('inventory.*', 'product.*', 'category.*', 'supplier.*', 'stock_transfer.*', 'stockroom.*')
-            ->whereIn('inventory.inventory_id', $inventoryIds)
-            ->get();
+    //     // Query to get the inventory report data
+    //     $inventoryJoined = DB::table('inventory')
+    //         ->join('product', 'inventory.product_id', '=', 'product.product_id')
+    //         ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
+    //         ->join('stockroom', 'stock_transfer.to_stockroom_id', '=', 'stockroom.stockroom_id')
+    //         ->join('category', 'product.category_id', '=', 'category.category_id')
+    //         ->join('supplier', 'product.supplier_id', '=', 'supplier.supplier_id')
+    //         ->select('inventory.*', 'product.*', 'category.*', 'supplier.*', 'stock_transfer.*', 'stockroom.*')
+    //         ->whereIn('inventory.inventory_id', $inventoryIds)
+    //         ->get();
 
-        // Set the report title
-        $reportTitle = 'Stock Discrepancy: An Audit Report from ' . \Carbon\Carbon::parse($startDate)->format('F j, Y') . ' to ' . \Carbon\Carbon::parse($endDate)->format('F j, Y');
+    //     // Set the report title
+    //     $reportTitle = 'Stock Discrepancy: An Audit Report from ' . \Carbon\Carbon::parse($startDate)->format('F j, Y') . ' to ' . \Carbon\Carbon::parse($endDate)->format('F j, Y');
 
-        $signaturePath = null;
+    //     $signaturePath = null;
 
-        // Return the view with the report data
-        return view('report.audit_inventory_report', compact('auditLogs', 'startDate', 'endDate', 'inventoryJoined', 'reportTitle', 'signaturePath'));
-    }
+    //     // Return the view with the report data
+    //     return view('report.audit_inventory_report', compact('auditLogs', 'startDate', 'endDate', 'inventoryJoined', 'reportTitle', 'signaturePath'));
+    // }
 
     public function generateAuditFilteredReport(Request $request)
     {
@@ -408,7 +408,7 @@ class ReportController extends Controller
         
         // Join the parts into a string and build the report title
         $reportTitle = !empty($reportTitleParts) ? 
-            'Stock Discrepancy: An Audit Report Filtered By ' . implode(', ', $reportTitleParts) : 'Stock Discrepancy: An Audit Report';
+            'Stock Discrepancy: A Report Filtered By ' . implode(', ', $reportTitleParts) : 'Stock Discrepancy Report';
         
         // Extract inventory IDs from the audit logs
         $inventoryIds = $auditLogs->pluck('inventory_id')->unique();
@@ -419,8 +419,7 @@ class ReportController extends Controller
             ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
             ->join('stockroom', 'stock_transfer.to_stockroom_id', '=', 'stockroom.stockroom_id')
             ->join('category', 'product.category_id', '=', 'category.category_id')
-            ->join('supplier', 'product.supplier_id', '=', 'supplier.supplier_id')
-            ->select('inventory.*', 'product.*', 'category.*', 'supplier.*', 'stock_transfer.*', 'stockroom.*')
+            ->select('inventory.*', 'product.*', 'category.*', 'stock_transfer.*', 'stockroom.*')
             ->whereIn('inventory.inventory_id', $inventoryIds)
             ->get();
 

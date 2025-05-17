@@ -173,42 +173,7 @@
             
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center">
                 <h1 class="h2">Inventory Management</h1>
-
-                <div class="btn-group d-flex justify-content-end">
-                    <!-- Restock Store Button with Notification -->
-                    <button class="restock-button mb-2" style="margin-right: 1em;" onclick="window.location.href='{{ route('filter_store_restock') }}'">
-                        <i class="fas fa-bell"></i> Restock Store
-                        @if($lowStoreStockCount > 0)
-                            <span class="notification-circle">
-                                {{ $lowStoreStockCount }}
-                            </span>
-                        @endif
-                    </button>
-    
-                    <!-- Restock Stockroom Button with Notification -->
-                    <button class="restock-button mb-2" onclick="window.location.href='{{ route('filter_stockroom_restock') }}'">
-                        <i class="fas fa-bell"></i> Restock Stockroom
-                        @if($lowStockroomStockCount > 0)
-                            <span class="notification-circle">
-                                {{ $lowStockroomStockCount }}
-                            </span>
-                        @endif
-                    </button>                    
-                </div>
             </div>
-
-            {{-- Generate Report --}}
-            <form method="POST" action="{{ url('inventory_report') }}" enctype="multipart/form-data" class="mb-4 report-form" id="reportForm">
-                @csrf
-                <div class="input-group mb-3">
-                    <input type="date" class="custom-date-picker" id="startDate" name="start_date" class="form-control" placeholder="Start Date" max="{{ date('Y-m-d') }}"  required>
-                    <span class="input-group-text">TO</span>
-                    <input type="date" class="custom-date-picker" id="endDate" name="end_date" class="form-control" placeholder="End Date" max="{{ date('Y-m-d') }}"  required>
-                    <button type="submit" class="btn btn-success ms-2">
-                        <i class="fa-solid fa-print"></i> Generate Report
-                    </button>
-                </div>
-            </form>
 
 
             <form method="POST" action="{{ route('generate_filter_report') }}" enctype="multipart/form-data" class="mb-4 report-form" id="reportForm">
@@ -221,7 +186,7 @@
                     <!-- Wrap the button inside a div and apply a CSS class for alignment -->
                     <div class="ms-auto">
                         <button type="submit" class="btn btn-success">
-                            <i class="fa-solid fa-print"></i> Generate Filter Report
+                            <i class="fa-solid fa-print"></i> Generate Report
                         </button>
                     </div>
                 </div>
@@ -237,28 +202,36 @@
                             <a type="button" class="btn btn-success mb-2" href="{{ route('inventory_table') }}">Display All</a>
                         </div>
 
+                        <!-- Restock Store Button with Notification -->
+                        <button class="restock-button mb-2" style="margin-right: 0.5em;" onclick="window.location.href='{{ route('filter_store_restock') }}'">
+                            <i class="fas fa-bell"></i> Restock Store
+                            @if($lowStoreStockCount > 0)
+                                <span class="notification-circle">
+                                    {{ $lowStoreStockCount }}
+                                </span>
+                            @endif
+                        </button> 
+
                        <!-- Product Name Dropdown -->
                         <div class="btn-group">
                             <button class="btn btn-success dropdown-toggle mb-2" type="button" id="productNameDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                 Product Name
                             </button>
-                            <ul class="dropdown-menu p-3" aria-labelledby="productNameDropdown" style="min-width: 250px;">
-                                <form id="letterFilterForm" method="GET" action="{{ route('product_name_filter') }}">
-                                    <div class="row">
-                                        @foreach(range('A', 'Z') as $letter)
-                                            <div class="col-4">
-                                                <label class="dropdown-item">
-                                                    <input type="checkbox" name="letters[]" value="{{ $letter }}"> {{ $letter }}
-                                                </label>
-                                            </div>
-                                        @endforeach
-                                    </div>
+                            <ul class="dropdown-menu p-3" aria-labelledby="productNameDropdown" style="min-width: 250px; max-height: 300px; overflow-y: auto;">
+                                <form id="productNameFilterForm" method="GET" action="{{ route('product_name_filter') }}">
+                                    @foreach ($allProductNames as $product)
+                                        <label class="dropdown-item">
+                                            <input type="checkbox" name="products[]" value="{{ $product->product_id }}">
+                                            {{ $product->product_name }}
+                                        </label>
+                                    @endforeach
                                     <div class="text-center mt-2">
                                         <button type="submit" class="btn btn-success btn-sm">Filter</button>
                                     </div>
                                 </form>
                             </ul>
                         </div>
+
 
 
                         <!-- Category Dropdown -->
@@ -295,9 +268,11 @@
                         <th>Name</th>
                         <th>Store Stock</th>
                         <th>Stockroom Stock</th>
-                        <th>Reorder Level</th>
-                        <th>Description</th>
-                        <th colspan="2">Action</th>
+                        <th>Total Stock</th>
+                        <th>Date Updated</th>
+                        @if(Auth::user()->role == 'Inventory Manager') 
+                            <th>Action</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody id="inventoryTableBody">
@@ -322,18 +297,15 @@
                             <td>{{ $data->product_name }}</td>
                             <td>{{ $data->in_stock - $data->product_quantity }}</td>
                             <td>{{ $data->product_quantity }}</td>
-                            <td>{{ $data->reorder_level }}</td>
-                            <td>
-                                <button type="button" class="btn btn-light" onclick="showDescriptionDetail('{{ $data->category_name }}', '{{ number_format($data->purchase_price_per_unit, 2) }}', '{{ number_format($data->sale_price_per_unit, 2) }}', '{{ $data->unit_of_measure }}', '{{ $data->descriptionArray['color'] ?? 'N/A' }}', '{{ $data->descriptionArray['size'] ?? 'N/A' }}', '{{ $data->descriptionArray['description'] ?? 'N/A' }}', '{{ $data->updated_at }}')">
-                                    <strong>more info.</strong>
-                                </button>
-                            </td>
-                            <td>
-                                <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#storeRestockModal{{ $data->product_id }}" style="1em">
-                                    <strong>Add Store Stock</strong>
-                                </button>
-                                <button type="button" class="btn btn-warning" onclick="orderLowStock('{{ $data->product_id }}')"><strong>Low Stock</strong></button>
-                            </td>
+                            <td>{{ $data->in_stock }}</td>
+                            <td>{{ $data->updated_at }}</td>
+                            @if(Auth::user()->role == 'Inventory Manager') 
+                                <td>
+                                    <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#storeRestockModal{{ $data->product_id }}" style="1em">
+                                        <strong>Add Store Stock</strong>
+                                    </button>
+                                </td>
+                            @endif
                         </tr>
 
 
@@ -430,42 +402,6 @@
 <!-- JavaScript for Supplier Details -->
 <script>
     
-    // error handling for generate report
-    document.addEventListener('DOMContentLoaded', function () {
-        const form = document.getElementById('reportForm');
-        const startDateInput = document.getElementById('startDate');
-        const endDateInput = document.getElementById('endDate');
-        const alertContainer = document.getElementById('alertContainer');
-
-        form.addEventListener('submit', function (event) {
-            const startDate = new Date(startDateInput.value);
-            const endDate = new Date(endDateInput.value);
-
-            // Clear previous errors
-            alertContainer.innerHTML = '';
-
-            if (startDate > endDate) {
-                event.preventDefault(); // Prevent form submission
-
-                // Create and append alert message
-                const alertMessage = `
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <strong>Error!</strong> The end date cannot be earlier than the start date.
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                `;
-                alertContainer.innerHTML = alertMessage;
-                return false;
-            }
-        });
-
-        // Clear the alert container when input values are changed
-        [startDateInput, endDateInput].forEach(input => {
-            input.addEventListener('change', () => {
-                alertContainer.innerHTML = '';
-            });
-        });
-    });
 
     // sweetalerts for product description
     function showDescriptionDetail(category, purchasedPrice, salePrice, UoM, color, size, description, updatedAt) {

@@ -139,44 +139,55 @@
     <div class="container-fluid">
         <main class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
             <div class="main-content">
+                <ul class="nav nav-tabs mb-4" id="auditTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs" type="button" role="tab" aria-controls="logs" aria-selected="true">
+                        Product Discrepancy Logs
+                    </button>
+                </li>
+                @if(Auth::user()->role == 'Inventory Manager') 
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="create-tab" data-bs-toggle="tab" data-bs-target="#create" type="button" role="tab" aria-controls="create" aria-selected="false">
+                            Find Product Discrepancies
+                        </button>
+                    </li>
+                @endif
+            </ul>
+
+            <div class="tab-content" id="auditTabsContent">
+
                 <!-- Alert Messages -->
                 @include('common.alert')
                 <div id="alertContainer"></div> <!-- Error message placeholder -->
 
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center">
-                    <h1 class="h2 mb-4">Audit Logs</h1>
-                </div>
-                <!-- Generate Report -->
-                <form method="POST" action="{{ url('audit_inventory_report') }}" enctype="multipart/form-data" class="mb-4 report-form" id="reportForm">
-                    @csrf
-                    <div class="input-group mb-3">
-                        <input type="date" class="custom-date-picker" id="startDate" name="start_date" class="form-control" max="{{ date('Y-m-d') }}"  required>
-                        <span class="input-group-text">TO</span>
-                        <input type="date" class="custom-date-picker" id="endDate" name="end_date" class="form-control" max="{{ date('Y-m-d') }}"  required>
-                        <button type="submit" class="btn btn-success ms-2">
-                            <i class="fa-solid fa-print"></i> Generate Report
-                        </button>
+                <div class="tab-pane fade show active" id="logs" role="tabpanel" aria-labelledby="logs-tab">
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center">
+                        <h1 class="h2 mb-4">Product Discrepancy Logs</h1>
                     </div>
-                </form>
                 <form method="POST" action="{{ route('generate_audit_filter_report') }}" enctype="multipart/form-data" class="mb-4 report-form" id="reportForm">
                     @csrf
                     <div class="input-group mb-3">
                         <!-- Pass values directly as arrays -->
                         <input type="hidden" name="user_ids" value="{{ implode(',', request('user_ids', [])) }}">
-                        <input type="hidden" name="discrepancy_reasons" value="{{ implode(',', request('discrepancy_reasons', [])) }}">
                         <input type="hidden" name="dates" value="{{ implode(',', request('dates', [])) }}">
-                
-                        <div class="ms-auto">
-                            <button type="submit" class="btn btn-success">
-                                <i class="fa-solid fa-print"></i> Generate Filter Report
-                            </button>
+                        
+                        <div class="d-flex w-100 align-items-end justify-content-between">
+                            <div class="text-start" style="min-width: 300px">
+                                <p><strong>Interpretation of Discrepancy Values:</strong></p>
+                                <ul>
+                                    <li>A <strong>negative discrepancy (-)</strong> means the physical stock count is less than the system's recorded stock.</li>
+                                    <li>A <strong>positive discrepancy (+)</strong> means the physical stock count is greater than the system's recorded stock.</li>
+                                </ul>
+                            </div>
+
+                            <div class="ms-auto">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fa-solid fa-print"></i> Generate Report
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </form>
-                
-                
-
-
                 <!-- Dropdown with Buttons -->
                     <div class="row d-flex justify-content-end">
                         <div class="col-auto">
@@ -186,52 +197,6 @@
                                 <div class="btn-group">
                                     <a type="button" class="btn btn-success mb-2" href="{{ route('inventory.audit.logs') }}">Display All</a>
                                 </div>
-
-                                <!-- Auditor Dropdown -->
-                                <div class="btn-group">
-                                    <button class="btn btn-success dropdown-toggle mb-2" type="button" id="auditorDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                        Auditor
-                                    </button>
-                                    <ul class="dropdown-menu" aria-labelledby="auditorDropdown">
-                                        <form id="auditorFilterForm" method="GET" action="{{ route('filter_auditor') }}">
-                                            @foreach($auditors as $auditor)
-                                                <li>
-                                                    <label class="dropdown-item">
-                                                        <input type="checkbox" name="user_ids[]" value="{{ $auditor->user_id }}"> 
-                                                        {{ $auditor->first_name }} {{ $auditor->last_name }}
-                                                    </label>
-                                                </li>
-                                            @endforeach
-                                            <li class="text-center mt-2">
-                                                <button type="submit" class="btn btn-success btn-sm">Filter</button>
-                                            </li>
-                                        </form>
-                                    </ul>
-                                </div>
-                                
-
-
-                            <!-- Discrepancy Reason Dropdown -->
-                            <div class="btn-group">
-                                <button class="btn btn-success dropdown-toggle mb-2" type="button" id="discrepancyReasonDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    Discrepancy Reason
-                                </button>
-                                <ul class="dropdown-menu p-3" aria-labelledby="discrepancyReasonDropdown" style="min-width: 250px;">
-                                    <form id="discrepancyReasonFilterForm" method="GET" action="{{ route('filter_discrepancy_reason') }}">
-                                        @foreach($discrepancyReasons as $discrepancyReason)
-                                            <li>
-                                                <label class="dropdown-item">
-                                                    <input type="checkbox" name="discrepancy_reasons[]" value="{{ $discrepancyReason->discrepancy_reason }}"> 
-                                                    {{ $discrepancyReason->discrepancy_reason }}
-                                                </label>
-                                            </li>
-                                        @endforeach
-                                        <li class="text-center mt-2">
-                                            <button type="submit" class="btn btn-success btn-sm">Filter</button>
-                                        </li>
-                                    </form>
-                                </ul>
-                            </div>
                             
                                 
                                 <!-- Date Audited Dropdown -->
@@ -271,52 +236,46 @@
                         </div>
                     </div>
 
-                    <table class="table table-responsive">
+                    <table class="table table-bordered table-responsive">
                     <thead>
                         <tr>
-                            <th>Auditor</th>
-                            <th>Product No.</th>
-                            <th>Product Name</th>
-                            <th>Store</th>
-                            <th>Stockroom</th>
-                            <th>Store Stock Discrepancy</th>
-                            <th>Stockroom Stock Discrepancy	</th>
-                            <th>in_stock_discrepancy</th>
-                            <th>Resolution</th>
+                            <th rowspan="2" class="text-center align-middle">Product Name</th>
+                            <th colspan="2" class="text-center">Physical Count</th>
+                            <th colspan="2" class="text-center">System Record</th>
+                            <th colspan="2" class="text-center">Discrepancies</th>
+                            <th rowspan="2" class="text-center align-middle">Total Discrepancies</th>
+                            <th rowspan="2" class="text-center align-middle">Discrepancy Reason</th>
+                            <th rowspan="2" class="text-center align-middle">Date Created</th>
+                        </tr>
+                        <tr>
+                            <th>Store Stock</th>
+                            <th>Stockroom Stock</th>
+                            <th>Store Stock</th>
+                            <th>Stockroom Stock</th>
+                            <th>Store Stock</th>
+                            <th>Stockroom Stock</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         @forelse ($auditLogs as $log)
                             <div>
                                 <tr>
-                                    <td>{{ $log->user->first_name }} {{ $log->user->last_name }}</td>
-                                    <td>{{ $log->inventory->product->product_id }}</td>
                                     <td>{{ $log->inventory->product->product_name }}</td>
-
-                                    <td>
-                                        <button type="button" class="btn btn-light" onclick="showStore('{{ $log->previous_store_quantity }}', '{{ $log->new_store_quantity }}', '{{ $log->previous_quantity_on_hand }}', '{{ $log->new_quantity_on_hand }}')">
-                                            <strong>more info.</strong>
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <button type="button" class="btn btn-light" onclick="showStockroom('{{ $log->previous_stockroom_quantity }}', '{{ $log->new_stockroom_quantity }}', '{{ $log->previous_quantity_on_hand }}', '{{ $log->new_quantity_on_hand }}')">
-                                            <strong>more info.</strong>
-                                        </button>
-                                    </td>
-                                    <td>{{ $log->store_stock_discrepancy }}</td>
-                                    <td>{{ $log->stockroom_stock_discrepancy }}</td>
-                                    <td>{{ $log->in_stock_discrepancy }}</td>
-                                    <td>
-                                        <button type="button" class="btn btn-light" onclick="showResolution('{{ $log->discrepancy_reason }}', '{{ htmlspecialchars($log->resolve_steps) }}', '{{ $log->audit_date }}')">
-                                            <strong>more info.</strong>
-                                        </button>
-                                    </td>
-                                    {{-- <td>{{ $log->audit_date }}</td> --}}
+                                    <td>{{ $log->physical_storestock_count }}</td>
+                                    <td>{{ $log->physical_stockroom_count }}</td>
+                                    <td>{{ $log->system_storestock_record }}</td>
+                                    <td>{{ $log->system_stockroom_record }}</td>
+                                    <td>{{ $log->storestock_discrepancies }}</td>
+                                    <td>{{ $log->stockroom_discrepancies }}</td>
+                                    <td>{{ $log->storestock_discrepancies + $log->stockroom_discrepancies}}</td>
+                                    <td>{{ $log->discrepancy_reason }}</td>
+                                    <td>{{ $log->audit_date }}</td>
                                 </tr>
                             </div>
                             @empty
                             <tr>
-                                <td colspan="9" class="text-center">
+                                <td colspan="10" class="text-center">
                                     <strong>There are no data currently.</strong>
                                 </td>
                             </tr>
@@ -324,12 +283,66 @@
                     </tbody>
                 </table>
             </div>
-            
+            </div>
+            <div class="tab-pane fade" id="create" role="tabpanel" aria-labelledby="create-tab">
+                <h2 class="h4 mt-3">Find Discrepancies</h2>
+                <form method="POST" action="{{ route('find_discrepancies') }}">
+                @csrf
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Product Name</th>
+                                <th>Physical Store Stock Count *Required</th>
+                                <th>System Store Stock Record</th>
+                                <th>Store Stock Discrepancy</th>
+                                <th>Physical Stockroom Stock Count *Required</th>
+                                <th>System Stockroom Stock Record</th>
+                                <th>Stockroom Stock Discrepancy</th>
+                                <th>Discrepancy Reason *Required</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($inventoryJoined as $inventory)
+                            <tr>
+                                <td>{{ $inventory->product_name }}</td>
+                                <td>
+                                    <input type="number" name="store_physical[{{ $inventory->inventory_id }}]" placeholder="Enter a Number" class="form-control store-physical" required autocomplete="off" value="">
+                                </td>
+                                <td>
+                                    <input type="number" name="system_store[{{ $inventory->inventory_id }}]" class="form-control" value="{{ $inventory->in_stock - $inventory->product_quantity }}" readonly>
+                                </td>
+                                <td>
+                                    <input type="text" name="store_discrepancy[{{ $inventory->inventory_id }}]" class="form-control store-discrepancy" readonly value="">
+                                </td>
+                                <td>
+                                    <input type="number" name="stockroom_physical[{{ $inventory->inventory_id }}]" placeholder="Enter a Number" class="form-control stockroom-physical" required autocomplete="off" value="">
+                                </td>
+                                <td>
+                                    <input type="number" name="system_stockroom[{{ $inventory->inventory_id }}]" class="form-control" value="{{ $inventory->product_quantity }}" readonly>
+                                </td>
+                                <td>
+                                    <input type="text" name="stockroom_discrepancy[{{ $inventory->inventory_id }}]" class="form-control stockroom-discrepancy" readonly value="">
+                                </td>
+                                <td>
+                                    <input type="text" name="reason[{{ $inventory->inventory_id }}]" placeholder="e.g. Human Error" id="reason-{{ $inventory->inventory_id }}" disabled autocomplete="off" value="">
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <button type="submit" class="btn btn-success mt-3">Submit Audit</button>
+            </form>
+
+            </div>
+
         </main>
     </div>
 @endsection
 
 <script>
+
     // sweetalerts for store
     function showStore(prevStock, newStock, prevInStock, newInStock) {
         const storeDetails = `
@@ -380,50 +393,78 @@
         });
     }
 
-    // error handling for generate report
+    // date filter
     document.addEventListener('DOMContentLoaded', function () {
-        const form = document.getElementById('reportForm');
-        const startDateInput = document.getElementById('startDate');
-        const endDateInput = document.getElementById('endDate');
-        const alertContainer = document.getElementById('alertContainer');
-
-        form.addEventListener('submit', function (event) {
-            const startDate = new Date(startDateInput.value);
-            const endDate = new Date(endDateInput.value);
-
-            // Clear previous errors
-            alertContainer.innerHTML = '';
-
-            if (startDate > endDate) {
-                event.preventDefault(); // Prevent form submission
-
-                // Create and append alert message
-                const alertMessage = `
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <strong>Error!</strong> The end date cannot be earlier than the start date.
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                `;
-                alertContainer.innerHTML = alertMessage;
-                return false;
-            }
-        });
-
-        // Clear the alert container when input values are changed
-        [startDateInput, endDateInput].forEach(input => {
-            input.addEventListener('change', () => {
-                alertContainer.innerHTML = '';
-            });
+        flatpickr('#datePicker', {
+            mode: 'multiple', // Allow selecting multiple dates
+            dateFormat: 'Y-m-d', // Format for the dates
+            altInput: true, // Show a user-friendly display
+            altFormat: 'F j, Y', // Display format
         });
     });
 
-    // date filter
-    document.addEventListener('DOMContentLoaded', function () {
-    flatpickr('#datePicker', {
-        mode: 'multiple', // Allow selecting multiple dates
-        dateFormat: 'Y-m-d', // Format for the dates
-        altInput: true, // Show a user-friendly display
-        altFormat: 'F j, Y', // Display format
+//for finding discrepancies
+document.addEventListener('DOMContentLoaded', function () {
+    const rows = document.querySelectorAll('tbody tr');
+
+    rows.forEach(row => {
+        // Get relevant inputs
+        const storeInput = row.querySelector('.store-physical');
+        const stockroomInput = row.querySelector('.stockroom-physical');
+
+        const storeDiscrepancy = row.querySelector('.store-discrepancy');
+        const stockroomDiscrepancy = row.querySelector('.stockroom-discrepancy');
+
+        const reasonInput = row.querySelector('input[name^="reason"]');
+
+        if (!storeInput || !stockroomInput || !storeDiscrepancy || !stockroomDiscrepancy || !reasonInput) return;
+
+        const getInt = (val) => {
+            const num = parseInt(val);
+            return isNaN(num) ? 0 : num;
+        };
+
+        // Function to update discrepancies and reason field state
+        function updateDiscrepancies() {
+    const physicalStore = getInt(storeInput.value);
+    const systemStore = getInt(row.querySelector('td:nth-child(3) input').value);
+
+    const physicalStockroom = getInt(stockroomInput.value);
+    const systemStockroom = getInt(row.querySelector('td:nth-child(6) input').value);
+
+    // Calculate discrepancies only if storeInput or stockroomInput has some input
+    // Otherwise, keep discrepancy fields empty
+    if (storeInput.value.trim() === '') {
+        storeDiscrepancy.value = '';
+    } else {
+        storeDiscrepancy.value = physicalStore - systemStore;
+    }
+
+    if (stockroomInput.value.trim() === '') {
+        stockroomDiscrepancy.value = '';
+    } else {
+        stockroomDiscrepancy.value = physicalStockroom - systemStockroom;
+    }
+
+    // Enable reason input only if discrepancy fields have non-zero numeric value
+    const storeDiff = parseInt(storeDiscrepancy.value) || 0;
+    const stockroomDiff = parseInt(stockroomDiscrepancy.value) || 0;
+
+    if (storeDiff !== 0 || stockroomDiff !== 0) {
+        reasonInput.removeAttribute('disabled');
+    } else {
+        reasonInput.value = '';
+        reasonInput.setAttribute('disabled', 'disabled');
+    }
+}
+
+
+        // Initialize discrepancies and reason input state on page load
+        updateDiscrepancies();
+
+        // Update on user input
+        storeInput.addEventListener('input', updateDiscrepancies);
+        stockroomInput.addEventListener('input', updateDiscrepancies);
     });
 });
 

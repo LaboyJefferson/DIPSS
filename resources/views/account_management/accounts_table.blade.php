@@ -275,11 +275,6 @@
                                                                     <label for="confirm_role_inventory_manager{{ $data->user_id }}" class="form-check-label">Inventory Manager</label>
                                                                 </div>
                                                                 <div class="form-check">
-                                                                    <input id="confirm_role_auditor_{{ $data->user_id }}" type="checkbox" class="form-check-input @error('roles') is-invalid @enderror" 
-                                                                           name="roles[]" value="Auditor">
-                                                                    <label for="confirm_role_auditor_{{ $data->user_id }}" class="form-check-label">Auditor</label>
-                                                                </div>
-                                                                <div class="form-check">
                                                                     <input id="confirm_role_salesperson_{{ $data->user_id }}" type="checkbox" class="form-check-input @error('roles') is-invalid @enderror" 
                                                                            name="roles[]" value="Salesperson">
                                                                     <label for="confirm_role_salesperson_{{ $data->user_id }}" class="form-check-label">Salesperson</label>
@@ -348,11 +343,6 @@
                                                                     <input id="update_role_inventory_manager_{{ $data->user_id }}" type="checkbox" class="form-check-input @error('roles') is-invalid @enderror" 
                                                                            name="roles[]" value="Inventory Manager">
                                                                     <label for="update_role_inventory_manager_{{ $data->user_id }}" class="form-check-label">Inventory Manager</label>
-                                                                </div>
-                                                                <div class="form-check">
-                                                                    <input id="update_role_auditor_{{ $data->user_id }}" type="checkbox" class="form-check-input @error('roles') is-invalid @enderror" 
-                                                                           name="roles[]" value="Auditor">
-                                                                    <label for="update_role_auditor_{{ $data->user_id }}" class="form-check-label">Auditor</label>
                                                                 </div>
                                                                 <div class="form-check">
                                                                     <input id="update_role_salesperson_{{ $data->user_id }}" type="checkbox" class="form-check-input @error('roles') is-invalid @enderror" 

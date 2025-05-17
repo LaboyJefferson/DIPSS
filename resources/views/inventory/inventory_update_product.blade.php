@@ -251,23 +251,12 @@
                             <input id="sale_price_per_unit" type="hidden" class="form-control @error('sale_price_per_unit') is-invalid @enderror" name="sale_price_per_unit" value="{{ old('sale_price_per_unit', $productJoined->sale_price_per_unit) }}" pattern="^\d{1,6}(\.\d{1,2})?$" required>
                             <input type="hidden" name="unit_of_measure" value="{{ old('unit_of_measure', $productJoined->unit_of_measure) }}">
                             <input id="purchase_price_per_unit" type="hidden" class="form-control @error('purchase_price_per_unit') is-invalid @enderror" name="purchase_price_per_unit" value="{{ old('purchase_price_per_unit', $productJoined->purchase_price_per_unit) }}" pattern="^\d{1,6}(\.\d{1,2})?$" required>
-                            <input type="hidden" name="supplier_dropdown" value="{{ old('supplier_dropdown', $productJoined->supplier_id) }}" required>
                             <input id="in_stock" type="hidden" class="form-control @error('in_stock') is-invalid @enderror" name="in_stock" value="{{ old('in_stock', $productJoined->in_stock) }}" pattern="^\d{1,6}$" required>
+                            <input id="reorder_level" type="hidden" class="form-control @error('reorder_level') is-invalid @enderror" name="reorder_level" value="{{ old('reorder_level', $productJoined->reorder_level) }}" pattern="^\d{1,6}$" required>
                             <p style="color: white"><strong>Purchased Quantity: {{ old('in_stock', $productJoined->in_stock) }}</strong></p>
                         </div>
                          <!-- Stockroom Details -->
                          <div class="row mb-3">
-                            <div class="col-md-3">
-                                <label class="input-group-text" for="reorder_level">
-                                    <i class="fa-solid fa-warehouse" style="margin-right: 5px;"></i> Reorder Level</i>
-                                </label>
-                                <input id="reorder_level" type="text" class="form-control @error('reorder_level') is-invalid @enderror" name="reorder_level" value="{{ old('reorder_level', $productJoined->reorder_level) }}" pattern="^\d{1,6}$" required>
-                                @error('reorder_level')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
                             <div class="col-md-3">
                                 <label class="input-group-text" for="aisle_number">
                                     <i class="fa-solid fa-warehouse" style="margin-right: 5px;"></i> Aisle Number</i>
@@ -310,7 +299,7 @@
                                 <label class="input-group-text" for="product_quantity">
                                     <i class="fa-solid fa-boxes" style="margin-right: 5px;"></i>Stockroom Stocks</i>
                                 </label>
-                                <input id="product_quantity" type="number" class="form-control @error('product_quantity') is-invalid @enderror" name="product_quantity" value="{{ old('product_quantity', $productJoined->product_quantity) }}" min="1" max="{{ old('in_stock', $productJoined->in_stock) }}" required>
+                                <input id="product_quantity" type="number" class="form-control @error('product_quantity') is-invalid @enderror" name="product_quantity" value="{{ old('product_quantity', $productJoined->product_quantity) }}" min="0" max="{{ old('in_stock', $productJoined->in_stock) }}" required>
                                 @error('product_quantity')
                                     <span class="invalid-feedback" role="alert">
                                         <strong>{{ $message }}</strong>

@@ -82,7 +82,7 @@
     }
 </style>
 
-@if(Auth::user()->role == 'Administrator' || Auth::user()->role == 'Purchase Manager' || Auth::user()->role == 'Inventory Manager' || Auth::user()->role == 'Auditor' || Auth::user()->role == 'Salesperson') 
+@if(Auth::user()->role == 'Administrator' || Auth::user()->role == 'Purchase Manager' || Auth::user()->role == 'Inventory Manager' || Auth::user()->role == 'Salesperson') 
 <div class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
     <div class="main-content">
         @include('common.alert')
@@ -139,11 +139,16 @@
                                         @csrf
                                         @method('PUT')
                                         <div class="form-group mb-4">
-                                            <label>Select User Roles <i>*Required</i>: </label>
+                                            <label>Select the user roles you want to switch to <i>*Required</i>: </label>
                                             <div class="form-check">
                                                 <input id="Administrator" type="checkbox" class="form-check-input @error('roles') is-invalid @enderror" 
                                                     name="roles[]" value="Administrator">
                                                 <label for="Administrator" class="form-check-label">Administrator</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input id="purchase_manager" type="checkbox" class="form-check-input @error('roles') is-invalid @enderror" 
+                                                    name="roles[]" value="Purchase Manager">
+                                                <label for="purchase_manager" class="form-check-label">Purchase Manager</label>
                                             </div>
                                             <div class="form-check">
                                                 <input id="inventory_manager" type="checkbox" class="form-check-input @error('roles') is-invalid @enderror" 
@@ -151,9 +156,9 @@
                                                 <label for="inventory_manager" class="form-check-label">Inventory Manager</label>
                                             </div>
                                             <div class="form-check">
-                                                <input id="auditor" type="checkbox" class="form-check-input @error('roles') is-invalid @enderror" 
-                                                    name="roles[]" value="Auditor">
-                                                <label for="auditor" class="form-check-label">Auditor</label>
+                                                <input id="salesperson" type="checkbox" class="form-check-input @error('roles') is-invalid @enderror" 
+                                                    name="roles[]" value="Salesperson">
+                                                <label for="salesperson" class="form-check-label">Salesperson</label>
                                             </div>
                                             @error('roles')
                                                 <div class="alert alert-danger">{{ $message }}</div>

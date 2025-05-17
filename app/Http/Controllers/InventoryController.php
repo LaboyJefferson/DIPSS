@@ -44,6 +44,12 @@ class InventoryController extends Controller
         ->where('role', '=', 'Inventory Manager')
         ->get();
 
+         // Fetch product names for filter dropdown
+        $allProductNames = DB::table('product')
+            ->select('product_id', 'product_name')
+            ->orderBy('product_name', 'asc')
+            ->get();
+
         $inventoryJoined = DB::table('inventory')
         ->join('product', 'inventory.product_id', '=', 'product.product_id')
         ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
@@ -94,103 +100,90 @@ class InventoryController extends Controller
         // Fetch all categories for filtering or display purposes
         $categories = Category::all();
 
-        // Fetch all categories for filtering or display purposes
-        $suppliers = Supplier::all();
-
         return view('inventory.inventory_table', [
             'userSQL' => $userSQL,
             'inventoryJoined' => $inventoryJoined,
             'categories' => $categories,
-            'suppliers' => $suppliers,
             'lowStoreStockCount' => $lowStoreStockCount,
             'lowStockroomStockCount' => $lowStockroomStockCount,
+            'allProductNames' => $allProductNames
         ]);
     }
 
     
     public function productNameFilter(Request $request)
-    {
-        if (!Auth::check()) {
-            return redirect('/login')->withErrors('You must be logged in.');
-        }
-    
-        // SQL `user` to get Inventory Manager details
-        $userSQL = DB::table('user')
-            ->select('user.*')
-            ->where('role', '=', 'Inventory Manager')
-            ->get();
-    
-        $selectedLetters = $request->get('letters', []); // Get selected letters from the request
-    
-        // Build the query with a letter filter
-        $inventoryQuery = DB::table('inventory')
-            ->join('product', 'inventory.product_id', '=', 'product.product_id')
-            ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
-            ->join('stockroom', 'stock_transfer.to_stockroom_id', '=', 'stockroom.stockroom_id')
-            ->join('category', 'product.category_id', '=', 'category.category_id')
-            ->leftJoin('product_supplier', 'product.product_id', '=', 'product_supplier.product_id')
-            ->leftJoin('supplier', 'product_supplier.supplier_id', '=', 'supplier.supplier_id')
-            ->select('inventory.*', 'product.*', 'category.*', 'supplier.*', 'stock_transfer.*', 'stockroom.*')
-            ->orderBy('product.product_name', 'asc')
-            ->distinct();
-    
-        // Apply filtering by letters if any letters are selected
-        if (!empty($selectedLetters)) {
-            $inventoryQuery->where(function ($query) use ($selectedLetters) {
-                foreach ($selectedLetters as $letter) {
-                    $query->orWhere('product.product_name', 'like', $letter . '%');
-                }
-            });
-        }
-    
-        $inventoryJoined = $inventoryQuery->get();
-        $inventoryJoined = $inventoryJoined->unique('product_id');
-    
-        // Decode description for each inventory item
-        foreach ($inventoryJoined as $item) {
-            $item->descriptionArray = json_decode($item->description, true);
-        }
-
-         // low stocks
-         $lowStoreStockMessages = [];
-         $lowStockroomStockMessages = [];
-         $processedProducts = [];  // Array to track products that have been processed
- 
-         // stockroom restock
-         foreach ($inventoryJoined as $data) {
-             $restockStore = $data->in_stock - $data->product_quantity;
-         
-             // Check if the product is low on stock for either the store or the stockroom
-             if (!in_array($data->product_id, $processedProducts)) {
-                 if ($restockStore <= $data->reorder_level) {
-                     $lowStoreStockMessages[] = "Product ID {$data->product_id} ({$data->product_name}) is low on stock. Please restock the store.";
-                     $processedProducts[] = $data->product_id; // Mark as processed
-                 }
-         
-                 if ($data->product_quantity <= $data->reorder_level) {
-                     $lowStockroomStockMessages[] = "Product ID {$data->product_id} ({$data->product_name}) is low on stock. Please restock the stockroom.";
-                     $processedProducts[] = $data->product_id; // Mark as processed
-                 }
-             }
-         }    
-             
-         // Pass the counts to the view
-         $lowStoreStockCount = count($lowStoreStockMessages);
-         $lowStockroomStockCount = count($lowStockroomStockMessages);
-    
-        // Fetch categories and suppliers for filtering or display purposes
-        $categories = Category::all();
-        $suppliers = Supplier::all();
-    
-        return view('inventory.inventory_table', [
-            'userSQL' => $userSQL,
-            'inventoryJoined' => $inventoryJoined,
-            'categories' => $categories,
-            'suppliers' => $suppliers,
-            'lowStoreStockCount' => $lowStoreStockCount,
-            'lowStockroomStockCount' => $lowStockroomStockCount,
-        ]);
+{
+    if (!Auth::check()) {
+        return redirect('/login')->withErrors('You must be logged in.');
     }
+
+    // Fetch product names for filter dropdown
+    $allProductNames = DB::table('product')
+        ->select('product_id', 'product_name')
+        ->orderBy('product_name', 'asc')
+        ->get();
+
+    $selectedProductIds = $request->get('products', []);
+
+    $inventoryQuery = DB::table('inventory')
+        ->join('product', 'inventory.product_id', '=', 'product.product_id')
+        ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
+        ->join('stockroom', 'stock_transfer.to_stockroom_id', '=', 'stockroom.stockroom_id')
+        ->join('category', 'product.category_id', '=', 'category.category_id')
+        ->leftJoin('product_supplier', 'product.product_id', '=', 'product_supplier.product_id')
+        ->leftJoin('supplier', 'product_supplier.supplier_id', '=', 'supplier.supplier_id')
+        ->select('inventory.*', 'product.*', 'category.*', 'supplier.*', 'stock_transfer.*', 'stockroom.*')
+        ->orderBy('product.product_name', 'asc')
+        ->distinct();
+
+    if (!empty($selectedProductIds)) {
+        $inventoryQuery->whereIn('product.product_id', $selectedProductIds);
+    }
+
+    $inventoryJoined = $inventoryQuery->get()->unique('product_id');
+
+    // Decode description
+    foreach ($inventoryJoined as $item) {
+        $item->descriptionArray = json_decode($item->description, true);
+    }
+
+    // Low stock alert setup
+    $lowStoreStockMessages = [];
+    $lowStockroomStockMessages = [];
+    $processedProducts = [];
+
+    foreach ($inventoryJoined as $data) {
+        $restockStore = $data->in_stock - $data->product_quantity;
+
+        if (!in_array($data->product_id, $processedProducts)) {
+            if ($restockStore <= $data->reorder_level) {
+                $lowStoreStockMessages[] = "Product ID {$data->product_id} ({$data->product_name}) is low on stock. Please restock the store.";
+                $processedProducts[] = $data->product_id;
+            }
+
+            if ($data->product_quantity <= $data->reorder_level) {
+                $lowStockroomStockMessages[] = "Product ID {$data->product_id} ({$data->product_name}) is low on stock. Please restock the stockroom.";
+                $processedProducts[] = $data->product_id;
+            }
+        }
+    }
+
+    $lowStoreStockCount = count($lowStoreStockMessages);
+    $lowStockroomStockCount = count($lowStockroomStockMessages);
+
+    $categories = Category::all();
+    $userSQL = DB::table('user')->where('role', 'Inventory Manager')->get();
+
+    return view('inventory.inventory_table', [
+        'userSQL' => $userSQL,
+        'inventoryJoined' => $inventoryJoined,
+        'categories' => $categories,
+        'lowStoreStockCount' => $lowStoreStockCount,
+        'lowStockroomStockCount' => $lowStockroomStockCount,
+        'allProductNames' => $allProductNames,
+    ]);
+}
+
     
 
 
@@ -208,6 +201,12 @@ class InventoryController extends Controller
 
         // Get the selected category IDs
         $categoryIds = $request->get('category_ids', []);
+
+        // Fetch product names for filter dropdown
+        $allProductNames = DB::table('product')
+            ->select('product_id', 'product_name')
+            ->orderBy('product_name', 'asc')
+            ->get();
 
         // If no categories are selected, show all products
         $inventoryJoined = DB::table('inventory')
@@ -273,6 +272,7 @@ class InventoryController extends Controller
             'suppliers' => $suppliers,
             'lowStoreStockCount' => $lowStoreStockCount,
             'lowStockroomStockCount' => $lowStockroomStockCount,
+            'allProductNames' => $allProductNames,
         ]);
     }
 
@@ -438,6 +438,12 @@ class InventoryController extends Controller
         ->where('role', '=', 'Purchase Manager')
         ->get();
 
+        // Fetch product names for filter dropdown
+        $allProductNames = DB::table('product')
+            ->select('product_id', 'product_name')
+            ->orderBy('product_name', 'asc')
+            ->get();
+
         $productJoined = DB::table('inventory')
             ->join('product', 'inventory.product_id', '=', 'product.product_id')
             ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
@@ -504,6 +510,7 @@ class InventoryController extends Controller
             'suppliers' => $suppliers,
             'lowStoreStockCount' => $lowStoreStockCount,
             'lowStockroomStockCount' => $lowStockroomStockCount,
+            'allProductNames' => $allProductNames,
         ]);
     }
 
@@ -575,7 +582,6 @@ class InventoryController extends Controller
             'color' => ['max:50'],
             'size' => ['max:50'],
             'description' => ['max:255'],
-            'supplier_dropdown' => ['required'],
             'company_name' => ['nullable', 'string', 'max:30'],
             'contact_person' => ['nullable', 'string', 'max:30'],
             'mobile_number' => ['nullable', 'numeric'],
@@ -608,21 +614,6 @@ class InventoryController extends Controller
                 $categoryId = $category->category_id; // Get the new category's ID
             }
 
-            // Handle supplier logic
-            $supplierId = $validatedData['supplier_dropdown'];
-            if ($supplierId === 'add-new') {
-                // Create a new supplier
-                $supplier = Supplier::create([
-                    'supplier_id' => $this->generateId('supplier'), // Generate custom ID for supplier
-                    'company_name' => $validatedData['company_name'],
-                    'contact_person' => $validatedData['contact_person'],
-                    'mobile_number' => $validatedData['mobile_number'],
-                    'email' => $validatedData['email'],
-                    'address' => $validatedData['address'],
-                ]);
-                $supplierId = $supplier->supplier_id; // Get the new supplier's ID
-            }
-
             // Update the Product
             $product->update([
                 'image_url' => $fileNameToStore,
@@ -633,7 +624,6 @@ class InventoryController extends Controller
                     'description' => $validatedData['description'],
                 ]),
                 'category_id' => $categoryId, // Use the existing or newly created category ID
-                'supplier_id' => $supplierId, // Use the existing or newly created supplier ID
             ]);
 
             $productJoined = DB::table('inventory')
@@ -641,9 +631,7 @@ class InventoryController extends Controller
                 ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
                 ->join('stockroom', 'stock_transfer.to_stockroom_id', '=', 'stockroom.stockroom_id')
                 ->join('category', 'product.category_id', '=', 'category.category_id')
-                ->leftJoin('product_supplier', 'product.product_id', '=', 'product_supplier.product_id')
-                ->leftJoin('supplier', 'product_supplier.supplier_id', '=', 'supplier.supplier_id')
-                ->select('inventory.*', 'product.*', 'category.*', 'supplier.*', 'stock_transfer.*', 'stockroom.*')
+                ->select('inventory.*', 'product.*', 'category.*', 'stock_transfer.*', 'stockroom.*')
                 ->where('product.product_id', '=',  $product->product_id)
                 ->first();
 
@@ -727,7 +715,13 @@ class InventoryController extends Controller
             ->where('role', '=', 'Inventory Manager')
             ->get();
     
-        $selectedLetters = $request->get('letters', []); // Get selected letters from the request
+       // Fetch product names for filter dropdown
+        $allProductNames = DB::table('product')
+            ->select('product_id', 'product_name')
+            ->orderBy('product_name', 'asc')
+            ->get();
+
+        $selectedProductIds = $request->get('products', []);
     
         // Build the query with a letter filter
         $inventoryQuery = DB::table('inventory')
@@ -741,13 +735,8 @@ class InventoryController extends Controller
             ->orderBy('product.product_name', 'asc')
             ->distinct();
     
-        // Apply filtering by letters if any letters are selected
-        if (!empty($selectedLetters)) {
-            $inventoryQuery->where(function ($query) use ($selectedLetters) {
-                foreach ($selectedLetters as $letter) {
-                    $query->orWhere('product.product_name', 'like', $letter . '%');
-                }
-            });
+        if (!empty($selectedProductIds)) {
+            $inventoryQuery->whereIn('product.product_id', $selectedProductIds);
         }
     
         $productJoined = $inventoryQuery->get();
@@ -796,6 +785,7 @@ class InventoryController extends Controller
             'suppliers' => $suppliers,
             'lowStoreStockCount' => $lowStoreStockCount,
             'lowStockroomStockCount' => $lowStockroomStockCount,
+            'allProductNames' => $allProductNames,
         ]);
     }
     
@@ -811,6 +801,12 @@ class InventoryController extends Controller
         $userSQL = DB::table('user')
             ->select('user.*')
             ->where('role', '=', 'Inventory Manager')
+            ->get();
+
+        // Fetch product names for filter dropdown
+        $allProductNames = DB::table('product')
+            ->select('product_id', 'product_name')
+            ->orderBy('product_name', 'asc')
             ->get();
 
         // Get the selected category IDs
@@ -880,6 +876,7 @@ class InventoryController extends Controller
             'suppliers' => $suppliers,
             'lowStoreStockCount' => $lowStoreStockCount,
             'lowStockroomStockCount' => $lowStockroomStockCount,
+            'allProductNames' => $allProductNames,
         ]);
     }
 
@@ -895,6 +892,12 @@ class InventoryController extends Controller
         $userSQL = DB::table('user')
             ->select('user.*')
             ->where('role', '=', 'Inventory Manager')
+            ->get();
+        
+            // Fetch product names for filter dropdown
+        $allProductNames = DB::table('product')
+            ->select('product_id', 'product_name')
+            ->orderBy('product_name', 'asc')
             ->get();
 
         // Get the selected category IDs
@@ -936,6 +939,7 @@ class InventoryController extends Controller
             'productJoined' => $productJoined,
             'categories' => $categories,
             'suppliers' => $suppliers,
+            'allProductNames' => $allProductNames,
         ]);
     }
 }

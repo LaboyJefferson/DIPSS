@@ -102,7 +102,7 @@ class LoginController extends Controller
 
                             // Auth::login($user);
                             $this->clearLoginAttempts($request);
-                            return redirect('/dashboard')->with('success', "Successfully logged in as {$roles[0]}.");
+                            return redirect('/dashboard');
                         }
 
                         //If user have multiple user_roles, update the role selected by the user in the login page
@@ -117,7 +117,7 @@ class LoginController extends Controller
                             });
 
                             $this->clearLoginAttempts($request);
-                            return redirect('/dashboard')->with('success', "Successfully Logged in.");
+                            return redirect('/dashboard');
                     } else {
                         // Increment Failed login attempts
                         $this->incrementLoginAttempts($request);

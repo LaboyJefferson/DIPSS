@@ -140,18 +140,6 @@
                 <h1 class="h2">Inventory Management</h1>
             </div>
 
-            {{-- Generate Report --}}
-            <form method="POST" action="{{ url('inventory_report') }}" enctype="multipart/form-data" class="mb-4 report-form" id="reportForm">
-                @csrf
-                <div class="input-group mb-3">
-                    <input type="date" class="custom-date-picker" id="startDate" name="start_date" class="form-control" placeholder="Start Date" max="{{ date('Y-m-d') }}"  required>
-                    <span class="input-group-text">TO</span>
-                    <input type="date" class="custom-date-picker" id="endDate" name="end_date" class="form-control" placeholder="End Date" max="{{ date('Y-m-d') }}"  required>
-                    <button type="submit" class="btn btn-success ms-2">
-                        <i class="fa-solid fa-print"></i> Generate Report
-                    </button>
-                </div>
-            </form>
             <form method="POST" action="{{ route('generate_filter_report') }}" enctype="multipart/form-data" class="mb-4 report-form" id="reportForm">
                 @csrf
                 <div class="input-group mb-3">
@@ -162,10 +150,7 @@
                     <!-- Wrap the button inside a div and apply a CSS class for alignment -->
                     <div class="ms-auto">
                         <button type="submit" class="btn btn-success">
-                            <i class="fa-solid fa-print"></i> Generate Filter Report
-                        </button>
-                        <button type="button" class="btn btn-success" onclick="window.location.href='{{ route('step1') }}'">
-                            Start Audit
+                            <i class="fa-solid fa-print"></i> Generate Report
                         </button>
                     </div>
                 </div>

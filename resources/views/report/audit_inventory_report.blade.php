@@ -171,47 +171,48 @@ body {
             <!-- Audit Logs Table -->
             <table class="table table-bordered">
                 <thead>
-                    <tr>
-                        <th>Audit No.</th>
-                        <th>Auditor</th>
-                        <th>Product Name</th>
-                        <th>Previous Store Stock</th>
-                        <th>Previous Stockroom Stock</th>
-                        <th>Previous QoH</th>
-                        <th>New Store Stock</th>
-                        <th>New Stockroom Stock</th>
-                        <th>New QoH</th>
-                        <th>Store Stock Discrepancy</th>
-                        <th>Stockroom Stock Discrepancy</th>
-                        <th>QoH Discrepancy</th>
-                        <th>Discrepancy Reason</th>
-                        <th>Audit Date</th>
-                    </tr>
+                     <tr>
+                            <th rowspan="2" class="text-center align-middle">Product Name</th>
+                            <th colspan="2" class="text-center">Physical Count</th>
+                            <th colspan="2" class="text-center">System Record</th>
+                            <th colspan="2" class="text-center">Discrepancies</th>
+                            <th rowspan="2" class="text-center align-middle">Total Discrepancies</th>
+                            <th rowspan="2" class="text-center align-middle">Discrepancy Reason</th>
+                            <th rowspan="2" class="text-center align-middle">Date Created</th>
+                        </tr>
+                        <tr>
+                            <th>Store Stock</th>
+                            <th>Stockroom Stock</th>
+                            <th>Store Stock</th>
+                            <th>Stockroom Stock</th>
+                            <th>Store Stock</th>
+                            <th>Stockroom Stock</th>
+                        </tr>
                 </thead>
                 <tbody>
-                    @forelse ($auditLogs as $log)
-                        <tr>
-                            <td>{{ $log->audit_id }}</td>
-                            <td>{{ $log->user->first_name }} {{ $log->user->last_name }}</td>
-                            <td>{{ $log->inventory->product->product_name }}</td>
-                            <td>{{ $log->previous_store_quantity }}</td>
-                            <td>{{ $log->previous_stockroom_quantity }}</td>
-                            <td>{{ $log->previous_quantity_on_hand }}</td>
-                            <td>{{ $log->new_store_quantity }}</td>
-                            <td>{{ $log->new_stockroom_quantity }}</td>
-                            <td>{{ $log->new_quantity_on_hand }}</td>
-                            <td>{{ $log->store_stock_discrepancy }}</td>
-                            <td>{{ $log->stockroom_stock_discrepancy }}</td>
-                            <td>{{ $log->in_stock_discrepancy }}</td>
-                            <td>{{ $log->discrepancy_reason }}</td>
-                            <td>{{ \Carbon\Carbon::parse($log->audit_date)->format('m/d/Y') }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="14" class="text-center">No audit logs found.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
+                        @forelse ($auditLogs as $log)
+                            <div>
+                                <tr>
+                                    <td>{{ $log->inventory->product->product_name }}</td>
+                                    <td>{{ $log->physical_storestock_count }}</td>
+                                    <td>{{ $log->physical_stockroom_count }}</td>
+                                    <td>{{ $log->system_storestock_record }}</td>
+                                    <td>{{ $log->system_stockroom_record }}</td>
+                                    <td>{{ $log->storestock_discrepancies }}</td>
+                                    <td>{{ $log->stockroom_discrepancies }}</td>
+                                    <td>{{ $log->storestock_discrepancies + $log->stockroom_discrepancies}}</td>
+                                    <td>{{ $log->discrepancy_reason }}</td>
+                                    <td>{{ $log->audit_date }}</td>
+                                </tr>
+                            </div>
+                            @empty
+                            <tr>
+                                <td colspan="10" class="text-center">
+                                    <strong>There are no data currently.</strong>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
             </table>
 
             <!-- Signature Section -->

@@ -205,7 +205,7 @@ class AccountManagementController extends Controller
         $request->validate([
             'admin_password' => 'required|string',
             'roles' => 'required|array|min:1',
-            'roles.*' => 'in:Administrator,Purchase Manager,Inventory Manager,Auditor,Salesperson',
+            'roles.*' => 'in:Administrator,Purchase Manager,Inventory Manager,Salesperson',
         ]);
 
         // Check if the admin's current password is correct
@@ -282,7 +282,7 @@ class AccountManagementController extends Controller
         $request->validate([
             'admin_password' => 'required|string',
             'roles' => 'required|array|min:1',
-            'roles.*' => 'in:Administrator,Purchase Manager,Inventory Manager,Auditor,Salesperson',
+            'roles.*' => 'in:Administrator,Purchase Manager,Inventory Manager,Salesperson',
         ]);
 
         // Check if the admin's current password is correct

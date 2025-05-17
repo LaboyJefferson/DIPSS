@@ -104,7 +104,7 @@ class ProfileController extends Controller
         if ($field === 'roles[]') {
             $request->validate([
                 'roles' => ['required', 'array'],
-                'roles.*' => ['string', 'in:Administrator,Inventory Manager,Auditor'], // Ensure valid roles
+                'roles.*' => ['string', 'in:Administrator,Purchase Manager,Inventory Manager,Salesperson'], // Ensure valid roles
             ]);
     
             // Update roles

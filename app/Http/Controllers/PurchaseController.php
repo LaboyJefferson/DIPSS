@@ -960,6 +960,12 @@ public function orderSupplierFilter(Request $request)
         ->where('role', '=', 'Inventory Manager')
         ->get();
 
+        // Fetch product names for filter dropdown
+        $allProductNames = DB::table('product')
+            ->select('product_id', 'product_name')
+            ->orderBy('product_name', 'asc')
+            ->get();
+
         $inventoryJoined = Inventory::with('product')
         ->join('product', 'inventory.product_id', '=', 'product.product_id')
         ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
@@ -1017,6 +1023,7 @@ public function orderSupplierFilter(Request $request)
             'suppliers' => $suppliers,
             'lowStoreStockCount' => $lowStoreStockCount,
             'lowStockroomStockCount' => $lowStockroomStockCount,
+            'allProductNames' => $allProductNames,
         ]);
     }
 

@@ -110,23 +110,20 @@
                         <div class="btn-group">
                             <a type="button" class="btn btn-success mb-2" href="{{ route('inventory_products_table') }}">Display All</a>
                         </div>
-
+                        
                        <!-- Product Name Dropdown -->
                         <div class="btn-group">
                             <button class="btn btn-success dropdown-toggle mb-2" type="button" id="productNameDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                 Product Name
                             </button>
-                            <ul class="dropdown-menu p-3" aria-labelledby="productNameDropdown" style="min-width: 250px;">
-                                <form id="letterFilterForm" method="GET" action="{{ route('inventory_filter_product_name') }}">
-                                    <div class="row">
-                                        @foreach(range('A', 'Z') as $letter)
-                                            <div class="col-4">
-                                                <label class="dropdown-item">
-                                                    <input type="checkbox" name="letters[]" value="{{ $letter }}"> {{ $letter }}
-                                                </label>
-                                            </div>
-                                        @endforeach
-                                    </div>
+                            <ul class="dropdown-menu p-3" aria-labelledby="productNameDropdown" style="min-width: 250px; max-height: 300px; overflow-y: auto;">
+                                <form id="productNameFilterForm" method="GET" action="{{ route('inventory_filter_product_name') }}">
+                                    @foreach ($allProductNames as $product)
+                                        <label class="dropdown-item">
+                                            <input type="checkbox" name="products[]" value="{{ $product->product_id }}">
+                                            {{ $product->product_name }}
+                                        </label>
+                                    @endforeach
                                     <div class="text-center mt-2">
                                         <button type="submit" class="btn btn-success btn-sm">Filter</button>
                                     </div>
@@ -177,28 +174,6 @@
                                 </form>
                             </ul>
                         </div>
-
-                        {{-- <div class="btn-group">
-                            <!-- Restock Store Button with Notification -->
-                            <button class="restock-button mb-2" style="margin-right: 1em;" onclick="window.location.href='{{ route('filter_store_restock') }}'">
-                                <i class="fas fa-bell"></i> Restock Store
-                                @if($lowStoreStockCount > 0)
-                                    <span class="notification-circle">
-                                        {{ $lowStoreStockCount }}
-                                    </span>
-                                @endif
-                            </button>
-
-                            <!-- Restock Stockroom Button with Notification -->
-                            <button class="restock-button mb-2" onclick="window.location.href='{{ route('filter_stockroom_restock') }}'">
-                                <i class="fas fa-bell"></i> Restock Stockroom
-                                @if($lowStockroomStockCount > 0)
-                                    <span class="notification-circle">
-                                        {{ $lowStockroomStockCount }}
-                                    </span>
-                                @endif
-                            </button>                    
-                        </div> --}}
                     </div>
                 </div>
             </div>
@@ -210,8 +185,12 @@
                             <th>Image</th>
                             <th>Name</th>
                             <th>Category</th>
+                            <th>Purchase Price Per Unit</th>
+                            <th>Sale Price Per Unit</th>
+                            <th>UoM</th>
                             <th>Description</th>
-                            <th>Supplier Details</th>
+                            <th>Supplier</th>
+                            {{-- <th>Supplier Details</th> --}}
                             <th colspan="2">Action</th>
                         </tr>
                     </thead>
@@ -237,16 +216,15 @@
                             </td>
                             <td>{{ $data->product_name }}</td>
                             <td>{{ $data->category_name }}</td>
+                            <td>{{ number_format($data->purchase_price_per_unit, 2) }}</td>
+                            <td>{{ number_format($data->sale_price_per_unit, 2) }}</td>
+                            <td>{{ $data->unit_of_measure }}</td>
                             <td>
-                                <button type="button" class="btn btn-light" onclick="showDescriptionDetail('{{ number_format($data->purchase_price_per_unit, 2) }}', '{{ number_format($data->sale_price_per_unit, 2) }}', '{{ $data->unit_of_measure }}', '{{ $data->descriptionArray['color'] ?? 'N/A' }}', '{{ $data->descriptionArray['size'] ?? 'N/A' }}', '{{ $data->descriptionArray['description'] ?? 'N/A' }}', '{{ $data->updated_at }}')">
+                                <button type="button" class="btn btn-light" onclick="showDescriptionDetail('{{ $data->descriptionArray['color'] ?? 'N/A' }}', '{{ $data->descriptionArray['size'] ?? 'N/A' }}', '{{ $data->descriptionArray['description'] ?? 'N/A' }}', '{{ $data->updated_at }}')">
                                     <strong>more info.</strong>
                                 </button>
                             </td>
-                            <td>
-                                <button type="button" class="btn btn-light" onclick="showSupplierDetail('{{ $data->company_name }}', '{{ $data->contact_person }}', '{{ $data->mobile_number }}', '{{ $data->email }}', '{{ $data->address }}')">
-                                    <strong>more info.</strong>
-                                </button>
-                            </td>
+                            <td>{{ $data->company_name }}</td>
                             <?php
                                 $storeStock = $data->in_stock - $data->product_quantity;
                             ?>
@@ -333,11 +311,8 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     // sweetalerts for product description
-    function showDescriptionDetail(purchasedPrice, salePrice, UoM, color, size, description, updatedAt) {
+    function showDescriptionDetail(color, size, description, updatedAt) {
         const descriptionDetails = `
-        <strong>Purchased Price:</strong> ${purchasedPrice}<br>
-        <strong>Sale Price:</strong> ${salePrice}<br>
-        <strong>Unit of Measurement:</strong> ${UoM}<br>
         <strong>Color:</strong> ${color}<br>
         <strong>Size:</strong> ${size}<br>
         <strong>Description:</strong> ${description}<br>
@@ -347,23 +322,6 @@
         Swal.fire({
             title: 'Description',
             html: descriptionDetails,
-            icon: 'info',
-            confirmButtonText: 'Close'
-        });
-    }
-
-    function showSupplierDetail(companyName, contactPerson, mobileNumber, email, address) {
-        const supplierDetails = `
-            <strong>Supplier:</strong> ${companyName}<br>
-            <strong>Contact Person:</strong> ${contactPerson}<br>
-            <strong>Mobile Number:</strong> ${mobileNumber}<br>
-            <strong>Email:</strong> ${email}<br>
-            <strong>Address:</strong> ${address}
-        `;
-
-        Swal.fire({
-            title: 'Supplier Details',
-            html: supplierDetails,
             icon: 'info',
             confirmButtonText: 'Close'
         });

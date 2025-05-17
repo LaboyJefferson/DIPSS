@@ -168,98 +168,23 @@ body {
                 </button>
             </div>
 
-            <!-- Inventory Table -->
-            <table class="table table-bordered">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mt-4">
-                    <h5>Product Details</h5> 
-                </div>
-                <thead>
-                    <tr>
-                        <th>Product No.</th>
-                        <th>Name</th>
-                        <th>Category</th>
-                        <th>Purchased Price</th>
-                        <th>Sale Price</th>
-                        <th>UoM</th>
-                        <th colspan="3">In Stock</th>
-                        <th style="font-size: 0.89em">Reorder Level</th>
-                        <th>Date Updated</th>
-                        <th>Color</th>
-                        <th>Size</th>
-                        <th>Description</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($inventoryItems as $data)
-                        <tr>
-                            <td>{{ $data->product_id }}</td>
-                            <td>{{ $data->product_name }}</td>
-                            <td>{{ $data->category_name }}</td>
-                            <td>{{ number_format($data->purchase_price_per_unit, 2) }}</td>
-                            <td>{{ number_format($data->sale_price_per_unit, 2) }}</td>
-                            <td>{{ $data->unit_of_measure }}</td>
-                            <td>{{ $data->in_stock - $data->product_quantity }}</td>
-                            <td>{{ $data->product_quantity }}</td>
-                            <td>{{ $data->in_stock }}</td>
-                            <td>{{ $data->reorder_level }}</td>
-                            <td>{{ $data->inventory_updated_at }}</td>
-                            <td>{{ $data->descriptionArray['color'] ?? 'N/A' }}</td>
-                            <td>{{ $data->descriptionArray['size'] ?? 'N/A' }}</td>
-                            <td>{{ $data->descriptionArray['description'] ?? 'N/A' }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="14" class="text-center">No data available for the selected period.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-
-            <!-- Stock Transfer Details Table -->
-            <table class="table table-bordered">
-                <h5>Stockroom Transfer Details</h5>
-                <thead>
-                    <tr>
-                        <th>Product No.</th>
-                        <th>Person In-charge</th>
-                        <th>From Stockroom</th>
-                        <th>To Stockroom</th>
-                        <th>Transfer Quantity</th>
-                        <th>Transfer Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($stockTransferJoined as $data)
-                        <tr>
-                            <td>{{ $data->product_id }}</td>
-                            <td>{{ $data->first_name }} {{ $data->last_name }}</td>
-                            <td>{{ $data->from_stockroom_id ? 'Yes' : 'No' }}</td>
-                            <td>{{ $data->to_stockroom_id ? 'Yes' : 'No' }}</td>
-                            <td>{{ $data->transfer_quantity }}</td>
-                            <td>{{ $data->transfer_date }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="text-center">No data available for the selected period.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-
             <!-- Stock Details Table -->
             <table class="table table-bordered">
                 <h5>Stock Details</h5>
                 <thead>
                     <tr>
                         <th style="border-bottom: 1px solid white"></th>
-                        <th colspan="3">In-Stock</th>
-                        <th colspan="2">Stockroom</th>
+                        <th style="border-bottom: 1px solid white"></th>
+                        <th colspan="2">Product Stocks Location</th>
+                        <th style="border-bottom: 1px solid white"></th>
+                        <th colspan="2">Stockroom Stocks Location</th>
                     </tr>
                     <tr>
                         <th>Product No.</th>
-                        <th>In-Store</th>
-                        <th>In-Stockroom</th>
-                        <th>Qoh</th>
+                        <th>Product Name</th>
+                        <th>Store</th>
+                        <th>Stockroom</th>
+                        <th>Total Stocks</th>
                         <th>Aisle No.</th>
                         <th>Cabinet Level</th>
                     </tr>
@@ -268,6 +193,7 @@ body {
                     @forelse($inventoryItems as $data)
                         <tr>
                             <td>{{ $data->product_id }}</td>
+                            <td>{{ $data->product_name }}</td>
                             <td>{{ $data->in_stock - $data->product_quantity }}</td>
                             <td>{{ $data->product_quantity }}</td>
                             <td>{{ $data->in_stock }}</td>
