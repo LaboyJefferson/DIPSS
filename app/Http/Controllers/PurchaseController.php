@@ -27,6 +27,10 @@ use Illuminate\Http\Request;
 
 class PurchaseController extends Controller
 {
+    // A fixed buffer for reordering.
+    // For example, if the reorder level is 10 and the buffer is 5, the reorder quantity becomes 15.
+    protected $reorderBuffer = 10;
+
     /**
      * Display a listing of the resource.
      *
@@ -40,82 +44,48 @@ class PurchaseController extends Controller
             return redirect('/login')->withErrors('You must be logged in.');
         }
 
-        // SQL `user` to get Inventory Manager details
-        $userSQL = DB::table('user')
-        ->select('user.*')
-        ->where('role', '=', 'Purchase Manager')
-        ->get();
-
+        // 1. Get products from inventory and joins
         $productJoined = DB::table('inventory')
             ->join('product', 'inventory.product_id', '=', 'product.product_id')
-            ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
-            ->join('stockroom', 'stock_transfer.to_stockroom_id', '=', 'stockroom.stockroom_id')
             ->join('category', 'product.category_id', '=', 'category.category_id')
             ->leftJoin('product_supplier', 'product.product_id', '=', 'product_supplier.product_id')
             ->leftJoin('supplier', 'product_supplier.supplier_id', '=', 'supplier.supplier_id')
-
-            ->select('inventory.*', 'product.*', 'category.*', 'supplier.*', 'stock_transfer.*', 'stockroom.*')
-            // Prioritize products that need restocking (either store or stockroom)
-            ->orderByRaw('
-            CASE 
-                WHEN inventory.in_stock - stockroom.product_quantity <= inventory.reorder_level THEN 1 
-                WHEN stockroom.product_quantity <= inventory.reorder_level THEN 2 
-                ELSE 3 
-            END, updated_at DESC')
+            ->select('inventory.*', 'product.*', 'category.category_name', 'supplier.supplier_id', 'supplier.company_name')
             ->get();
-            
+
+        // 2. Get product IDs already reordered (status: To order or Ordered)
+        $reorderedProductIds = DB::table('order_items')
+            ->join('purchase_order', 'order_items.purchase_order_id', '=', 'purchase_order.purchase_order_id')
+            ->whereIn('purchase_order.order_status', [1, 2]) // To order or Ordered
+            ->pluck('order_items.product_id')
+            ->unique()
+            ->toArray();
+
+        // 3. Filter products needing reorder
+        $products = collect(); // make it a Collection
+
+        foreach ($productJoined as $product) {
+            // Only consider products that currently need reorder
+            if ($product->in_stock < $product->reorder_level) {
+                $product->units_to_reorder = max(0, ($product->reorder_level - $product->in_stock) + $this->reorderBuffer);
         
-        // Filter duplicates based on a unique key (e.g., product_id)
-        $productJoined = $productJoined->unique('product_id');
-
-
-
-        // Decode the description for each inventory item
-        foreach ($productJoined as $item) {
-            $item->descriptionArray = json_decode($item->description, true); // Decode the JSON description into an array
+                // Check if it has already been reordered
+                $product->status = in_array($product->product_id, $reorderedProductIds)
+                    ? 'Already Reordered'
+                    : 'Needs Reorder';
+        
+                $products->push($product);
+            }
         }
 
-        // low stocks
-        $lowStoreStockMessages = [];
-        $lowStockroomStockMessages = [];
-        $processedProducts = [];  // Array to track products that have been processed
+        $groupedProducts = $products->groupBy('supplier_id');
+        $addresses = Address::all();
 
-        // stockroom restock
-        foreach ($productJoined as $data) {
-            $restockStore = $data->in_stock - $data->product_quantity;
-        
-            // Check if the product is low on stock for either the store or the stockroom
-            if (!in_array($data->product_id, $processedProducts)) {
-                if ($restockStore <= $data->reorder_level) {
-                    $lowStoreStockMessages[] = "Product ID {$data->product_id} ({$data->product_name}) is low on stock. Please restock the store.";
-                    $processedProducts[] = $data->product_id; // Mark as processed
-                }
-        
-                if ($data->product_quantity <= $data->reorder_level) {
-                    $lowStockroomStockMessages[] = "Product ID {$data->product_id} ({$data->product_name}) is low on stock. Please restock the stockroom.";
-                    $processedProducts[] = $data->product_id; // Mark as processed
-                }
-            }
-        }    
-            
-        // Pass the counts to the view
-        $lowStoreStockCount = count($lowStoreStockMessages);
-        $lowStockroomStockCount = count($lowStockroomStockMessages);
-
-        // Fetch all categories for filtering or display purposes
-        $categories = Category::all();
-
-        // Fetch all categories for filtering or display purposes
-        $suppliers = Supplier::all();
-
-        // Pass the inventory managers and user role to the view
+        // Pass the data to the view
         return view('purchase.purchase_table', [
-            'userSQL' => $userSQL,
-            'productJoined' => $productJoined,
-            'categories' => $categories,
-            'suppliers' => $suppliers,
-            'lowStoreStockCount' => $lowStoreStockCount,
-            'lowStockroomStockCount' => $lowStockroomStockCount,
+            'groupedProducts' => $groupedProducts,
+            'reorderedProductIds' => $reorderedProductIds,
+            'addresses' => $addresses,
         ]);
     }
 
@@ -124,11 +94,12 @@ class PurchaseController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function create()
+    public function create($id)
     {
-        $suppliers = Supplier::all(); // Fetch all suppliers
+        $supplier = Supplier::find($id);
         $categories = Category::all(); // Fetch all categories
-        return view('purchase.create_product', compact('suppliers', 'categories')); // Pass to the view
+
+        return view('purchase.create_product', compact('supplier', 'categories')); // Pass to the view
     }
 
 
@@ -154,121 +125,79 @@ class PurchaseController extends Controller
         return response()->json($supplier);
     }
 
-
     /**
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(Request $request, $supplierId)
     {
         // Validate the incoming request data
         $validatedData = $request->validate([
             'image_url' => ['image'],
             'product_name' => ['required', 'string', 'max:30'],
             'category_dropdown' => ['required'],
-            'category_name' => ['nullable', 'string', 'max:30', 'unique:category,category_name',],
-            'reorder_level' => ['nullable', 'numeric'],
-            'color' => ['max:50'],
-            'size' => ['max:50'],
-            'description' => ['max:255'],
-            'aisle_number' => ['numeric'],
-            'cabinet_level' => ['numeric'],
+            'description' => ['nullable', 'string', 'max:255'],
+            'purchase_price_per_unit' => ['required', 'regex:/^\d{1,6}(\.\d{1,2})?$/'],
+            'reorder_level' => ['required', 'numeric'],
         ]);
 
-         // Handle file upload with a default image if no file is provided
-         $fileNameToStore = 'noimage.jpg'; 
-         if ($request->hasFile('image_url')) {
-             $fileNameToStore = $this->handleFileUpload($request->file('image_url'));
-         }
+        // Handle file upload with a default image if no file is provided
+        $fileNameToStore = 'noimage.jpg'; 
+        if ($request->hasFile('image_url')) {
+            $fileNameToStore = $this->handleFileUpload($request->file('image_url'));
+        }
 
         // Use a transaction to ensure data integrity
-        DB::transaction(function () use ($validatedData, $fileNameToStore ) {
-            // Handle category logic
-            $categoryId = $validatedData['category_dropdown'];
-            if ($categoryId === 'add-new-category') {
-                // Create a new Category
-                $category = Category::create([
-                    'category_id' => $this->generateId('category'), // Generate custom ID for category
-                    'category_name' => $validatedData['category_name'],
-                ]);
-                $categoryId = $category->category_id; // Get the new supplier's ID
-            }
-
+        DB::transaction(function () use ($validatedData, $fileNameToStore, $supplierId ) {
             $productId = $this->generateId('product');
-
+            $productSupplierId = $this->generateId('product_supplier');
+            
             // Create the Product
             $product = Product::create([
                 'image_url' => $fileNameToStore,
-                'product_id' => $productId, // Generate custom ID for product
+                'product_id' => $productId,
                 'product_name' => $validatedData['product_name'],
-                'description' => json_encode([ // Encode the array as JSON
-                    'color' => $validatedData['color'],
-                    'size' => $validatedData['size'],
-                    'description' => $validatedData['description'],
-                ]),
-                'category_id' => $categoryId, // Use the existing or newly created category ID
+                'description' => $validatedData['description'],
+                'category_id' => $validatedData['category_dropdown'],
             ]);
 
-            // Handle supplier logic
-            // $supplierId = $validatedData['supplier_dropdown'];
-            // if($supplierId !== NULL){
-            //     if ($supplierId === 'add-new') {
-            //         // Create a new supplier
-            //         $supplier = Supplier::create([
-            //             'supplier_id' => $this->generateId('supplier'), // Generate custom ID for supplier
-            //             'company_name' => $validatedData['company_name'],
-            //             'contact_person' => $validatedData['contact_person'],
-            //             'mobile_number' => $validatedData['mobile_number'],
-            //             'email' => $validatedData['email'],
-            //             'address' => $validatedData['address'],
-            //         ]);
-            //         $supplierId = $supplier->supplier_id; // Get the new supplier's ID
-            //     }
+            ProductSupplier::create([
+                'product_supplier_id' => $productSupplierId,
+                'supplier_id' => $supplierId,
+                'product_id' => $product->product_id,
+            ]);
 
-            //     // Connect the product and supplier at product_supplier table
-            //     ProductSupplier::create([
-            //         'product_supplier_id' => $this->generateId('product_supplier'),
-            //         'supplier_id' => $supplierId,
-            //         'product_id' => $productId,
-            //     ]);
-            // }
-
-            
             // Create the Stockroom
             $stockroom = Stockroom::create([
-                'stockroom_id' => $this->generateId('stockroom'), // Generate custom ID for product
-                // 'aisle_number' => $validatedData['aisle_number'],
-                // 'cabinet_level' => $validatedData['cabinet_level'],
+                'stockroom_id' => $this->generateId('stockroom'),
                 'product_quantity' => 0,
-                'category_id' => $categoryId, // Use the existing or newly created category ID
+                'category_id' => $validatedData['category_dropdown'],
             ]);
 
             // Create the StockTransfer
             StockTransfer::create([
-                'stock_transfer_id' => $this->generateId('stock_transfer'), // Generate custom ID for product
+                'stock_transfer_id' => $this->generateId('stock_transfer'),
                 'transfer_quantity' => 0,
                 'transfer_date' => now(),
-                'product_id' => $productId, // Use the generated category_id
-                'user_id' => Auth::user()->user_id, // Use the logged in user_id
-                'to_stockroom_id' => $stockroom->stockroom_id, // Use the generated stockroom_id
+                'product_id' => $productId,
+                'user_id' => Auth::user()->user_id,
+                'to_stockroom_id' => $stockroom->stockroom_id,
             ]);
 
             // Create the Inventory
             Inventory::create([
-                'inventory_id' => $this->generateId('inventory'), // Generate custom ID for inventory
-                // 'purchase_price_per_unit' => $validatedData['purchase_price_per_unit'],
-                // 'sale_price_per_unit' => $validatedData['sale_price_per_unit'],
-                // 'unit_of_measure' => $validatedData['unit_of_measure'],
+                'inventory_id' => $this->generateId('inventory'),
+                'purchase_price_per_unit' => $validatedData['purchase_price_per_unit'],
                 'in_stock' => 0,
-                // 'reorder_level' => $validatedData['reorder_level'],
-                'product_id' => $productId, // Use the generated product_id
+                'reorder_level' => $validatedData['reorder_level'],
+                'product_id' => $productId,
             ]);
         });
 
         // Redirect or return response after successful creation
-        return redirect()->route('purchase_table')->with('success', 'Product added successfully.');
+        return redirect()->route('supplier_info', $supplierId)->with('success', 'Product added successfully.');
     }
 
     private function handleFileUpload($file)
@@ -397,73 +326,72 @@ class PurchaseController extends Controller
 
 
 // order filter
-public function orderProductFilter(Request $request)
-{
-    if (!Auth::check()) {
-        return redirect('/login')->withErrors('You must be logged in.');
+    public function orderProductFilter(Request $request)
+    {
+        if (!Auth::check()) {
+            return redirect('/login')->withErrors('You must be logged in.');
+        }
+
+        $currentUser = Auth::id();
+
+        $userSQL = DB::table('user')
+                ->select('user.*')
+                ->where('user_roles', 'like', '%Purchase Manager%')
+                ->get();
+
+        $selectedLetters = $request->get('letters', []);
+
+        // Build the base query
+        $query = PurchaseOrder::join('order_items', 'purchase_order.purchase_order_id', '=', 'order_items.purchase_order_id')
+            ->join('product', 'order_items.product_id', '=', 'product.product_id')
+            ->join('order_statuses', 'purchase_order.order_status', '=', 'order_statuses.order_statuses')
+            ->join('order_supplier', 'purchase_order.purchase_order_id', '=' ,'order_supplier.purchase_order_id')
+            ->join('supplier', 'order_supplier.supplier_id', '=', 'supplier.supplier_id')
+            ->join('user', 'user.user_id', '=', 'purchase_order.created_by')
+            ->select('purchase_order.*', 'order_statuses.status_name', 'supplier.company_name', 'user.first_name', 'user.last_name')
+            ->with(['order_items.product', 'suppliers', 'user', 'status'])
+            ->distinct();
+
+        // Apply filtering by selected product name starting letters
+        if (!empty($selectedLetters)) {
+            $query->where(function ($q) use ($selectedLetters) {
+                foreach ($selectedLetters as $letter) {
+                    $q->orWhere('product.product_name', 'like', $letter . '%');
+                }
+            });
+        }
+
+        $orders = $query->get();
+
+        // Get unique payment methods from orders
+        $paymentMethods = $orders->pluck('payment_method')->unique()->values();
+
+        // Collect unique products from order items
+        $productJoined = $orders->flatMap(function ($order) {
+            return $order->order_items;
+        })->unique('product_id');
+
+        foreach ($productJoined as $item) {
+            $item->descriptionArray = json_decode($item->description, true);
+        }
+
+        $categories = Category::all();
+        $suppliers = Supplier::all();
+        $orderStatuses = OrderStatuses::all();
+
+        return view('purchase.order_table', [
+            'userSQL' => $userSQL,
+            'productJoined' => $productJoined,
+            'categories' => $categories,
+            'suppliers' => $suppliers,
+            'orders' => $orders,
+            'orderStatuses' => $orderStatuses,
+            'paymentMethods' => $paymentMethods,
+            'currentUser' => $currentUser
+        ]);
     }
 
-    $currentUser = Auth::id();
-
-    $userSQL = DB::table('user')
-            ->select('user.*')
-            ->where('user_roles', 'like', '%Purchase Manager%')
-            ->get();
-
-    $selectedLetters = $request->get('letters', []);
-
-    // Build the base query
-    $query = PurchaseOrder::join('order_items', 'purchase_order.purchase_order_id', '=', 'order_items.purchase_order_id')
-        ->join('product', 'order_items.product_id', '=', 'product.product_id')
-        ->join('order_statuses', 'purchase_order.order_status', '=', 'order_statuses.order_statuses')
-        ->join('order_supplier', 'purchase_order.purchase_order_id', '=' ,'order_supplier.purchase_order_id')
-        ->join('supplier', 'order_supplier.supplier_id', '=', 'supplier.supplier_id')
-        ->join('user', 'user.user_id', '=', 'purchase_order.created_by')
-        ->select('purchase_order.*', 'order_statuses.status_name', 'supplier.company_name', 'user.first_name', 'user.last_name')
-        ->with(['order_items.product', 'suppliers', 'user', 'status'])
-        ->distinct();
-
-    // Apply filtering by selected product name starting letters
-    if (!empty($selectedLetters)) {
-        $query->where(function ($q) use ($selectedLetters) {
-            foreach ($selectedLetters as $letter) {
-                $q->orWhere('product.product_name', 'like', $letter . '%');
-            }
-        });
-    }
-
-    $orders = $query->get();
-
-    // Get unique payment methods from orders
-    $paymentMethods = $orders->pluck('payment_method')->unique()->values();
-
-    // Collect unique products from order items
-    $productJoined = $orders->flatMap(function ($order) {
-        return $order->order_items;
-    })->unique('product_id');
-
-    foreach ($productJoined as $item) {
-        $item->descriptionArray = json_decode($item->description, true);
-    }
-
-    $categories = Category::all();
-    $suppliers = Supplier::all();
-    $orderStatuses = OrderStatuses::all();
-
-    return view('purchase.order_table', [
-        'userSQL' => $userSQL,
-        'productJoined' => $productJoined,
-        'categories' => $categories,
-        'suppliers' => $suppliers,
-        'orders' => $orders,
-        'orderStatuses' => $orderStatuses,
-        'paymentMethods' => $paymentMethods,
-        'currentUser' => $currentUser
-    ]);
-}
-
-
-public function orderSupplierFilter(Request $request)
+    public function orderSupplierFilter(Request $request)
     {
         if (!Auth::check()) {
             return redirect('/login')->withErrors('You must be logged in.');
@@ -778,20 +706,40 @@ public function orderSupplierFilter(Request $request)
             'lowStockroomStockCount' => $lowStockroomStockCount,
         ]);
     }
-    
 
+    // Category filter for products under the suppliers tab: supplier_info page
+    public function CategoryFilter2(Request $request, $supplierId)
+    {
+        if (!Auth::check()) {
+            return redirect('/login')->withErrors('You must be logged in.');
+        }
+
+        // Get the selected category IDs
+        $categoryIds = $request->get('category_ids', []);
+
+        // Find the supplier
+        $supplier = Supplier::findOrFail($supplierId);
+
+        // Fetch products related to this supplier, optionally filtering by category
+        $productsQuery = $supplier->products()->with('category');
+
+        if (!empty($categoryIds)) {
+            $productsQuery->whereIn('category_id', $categoryIds);
+        }
+
+        $products = $productsQuery->get();
+
+        // Fetch all categories for filtering or display purposes
+        $categories = Category::all();
+
+        return view('purchase.supplier_info', compact(['supplier', 'products', 'categories']));
+    }
 
     public function CategoryFilter(Request $request)
     {
         if (!Auth::check()) {
             return redirect('/login')->withErrors('You must be logged in.');
         }
-
-        // Fetch Inventory Manager details
-        $userSQL = DB::table('user')
-            ->select('user.*')
-            ->where('role', '=', 'Inventory Manager')
-            ->get();
 
         // Get the selected category IDs
         $categoryIds = $request->get('category_ids', []);
@@ -853,7 +801,6 @@ public function orderSupplierFilter(Request $request)
         $suppliers = Supplier::all();
 
         return view('purchase.purchase_table', [
-            'userSQL' => $userSQL,
             'productJoined' => $productJoined,
             'categories' => $categories,
             'suppliers' => $suppliers,
@@ -861,8 +808,6 @@ public function orderSupplierFilter(Request $request)
             'lowStockroomStockCount' => $lowStockroomStockCount,
         ]);
     }
-
-
 
     public function supplierFilter(Request $request)
     {
@@ -1102,9 +1047,6 @@ public function orderSupplierFilter(Request $request)
         ]);
     }
 
-
-
-
     /**
      * Display the specified resource.
      *
@@ -1122,7 +1064,7 @@ public function orderSupplierFilter(Request $request)
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function edit($productId)
+    public function edit($supplierId, $productId)
     {
         // Check if the user is logged in
         if (!Auth::check()) {
@@ -1130,35 +1072,14 @@ public function orderSupplierFilter(Request $request)
             return redirect('/login')->withErrors('You must be logged in.');
         }
 
-        // SQL `user` to get Inventory Manager details
-        $userSQL = DB::table('user')
-        ->select('user.*')
-        ->where('role', '=', 'Inventory Manager')
-        ->get();
+        $product = Product::find($productId);
 
-        $productJoined = DB::table('inventory')
-            ->join('product', 'inventory.product_id', '=', 'product.product_id')
-            ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
-            ->join('stockroom', 'stock_transfer.to_stockroom_id', '=', 'stockroom.stockroom_id')
-            ->join('category', 'product.category_id', '=', 'category.category_id')
-            ->leftJoin('product_supplier', 'product.product_id', '=', 'product_supplier.product_id')
-            ->leftJoin('supplier', 'product_supplier.supplier_id', '=', 'supplier.supplier_id')
-            ->select('inventory.*', 'product.*', 'category.*', 'supplier.*', 'stock_transfer.*', 'stockroom.*')
-            ->where('product.product_id', '=', $productId)
-            ->first();
-
-        // Decode the description for the product
-        // Decode the description for the product if it's set
-        $descriptionArray = [];
-        if ($productJoined && isset($productJoined->description)) {
-            $descriptionArray = json_decode($productJoined->description, true); // Decode the JSON description into an array
-        }
+        $inventory = Inventory::where('product_id', '=', $productId)->first();
 
         // Fetch all categories for filtering or display purposes
         $categories = Category::all();
-        $suppliers = Supplier::all();
 
-        return view('purchase.update_product', compact('userSQL', 'productJoined', 'categories', 'suppliers', 'descriptionArray'));
+        return view('purchase.update_product', compact('supplierId', 'product', 'inventory', 'categories'));
     }
 
 
@@ -1169,114 +1090,66 @@ public function orderSupplierFilter(Request $request)
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $productId)
-{
-    // Validate the incoming request data
-    $validatedData = $request->validate([
-        'image_url' => ['image', 'nullable'],
-        'product_name' => ['required', 'string', 'max:30'],
-        'category_dropdown' => ['required'],
-        'category_name' => ['nullable', 'string', 'max:30', 'unique:category,category_name',],
-        'reorder_level' => ['required', 'numeric'],
-        'color' => ['max:50'],
-        'size' => ['max:50'],
-        'description' => ['max:255'],
-        'aisle_number' => ['numeric'],
-        'cabinet_level' => ['numeric'],
-    ]);
+    public function update(Request $request, $supplierId, $productId)
+    {
+        // Validate the incoming request data
+        $validatedData = $request->validate([
+            'image_url' => ['image'],
+            'product_name' => ['required', 'string', 'max:30'],
+            'category_dropdown' => ['required'],
+            'description' => ['nullable', 'string', 'max:255'],
+            'purchase_price_per_unit' => ['required', 'regex:/^\d{1,6}(\.\d{1,2})?$/'],
+            'reorder_level' => ['required', 'numeric'],
+        ]);
 
-    // Find the product by its ID
-    $product = Product::findOrFail($productId);
-    $fileNameToStore = $product->image_url; // Default to the existing image
+        // Find the product by its ID
+        $product = Product::findOrFail($productId);
+        $fileNameToStore = $product->image_url;
 
-    // Handle file upload if a new image is provided
-    if ($request->hasFile('image_url')) {
-        $fileNameToStore = $this->handleFileUpload($request->file('image_url'));
-    }
-
-    // Use a transaction to ensure data integrity
-    DB::transaction(function () use ($validatedData, $fileNameToStore, $product) {
-        // Handle category logic
-        $categoryId = $validatedData['category_dropdown'];
-        if ($categoryId === 'add-new-category') {
-            // Create a new Category
-            $category = Category::create([
-                'category_id' => $this->generateId('category'), // Generate custom ID for category
-                'category_name' => $validatedData['category_name'],
-            ]);
-            $categoryId = $category->category_id; // Get the new category's ID
+        // Handle file upload if a new image is provided
+        if ($request->hasFile('image_url')) {
+            $fileNameToStore = $this->handleFileUpload($request->file('image_url'));
         }
 
-        // Handle supplier logic
-        // $supplierId = $validatedData['supplier_dropdown'];
-        // if ($supplierId === 'add-new') {
-        //     // Create a new supplier
-        //     $supplier = Supplier::create([
-        //         'supplier_id' => $this->generateId('supplier'), // Generate custom ID for supplier
-        //         'company_name' => $validatedData['company_name'],
-        //         'contact_person' => $validatedData['contact_person'],
-        //         'mobile_number' => $validatedData['mobile_number'],
-        //         'email' => $validatedData['email'],
-        //         'address' => $validatedData['address'],
-        //     ]);
-        //     $supplierId = $supplier->supplier_id; // Get the new supplier's ID
-        // }
-
-        // Update the Product
-        $product->update([
-            'image_url' => $fileNameToStore,
-            'product_name' => $validatedData['product_name'],
-            'description' => json_encode([ // Encode the array as JSON
-                'color' => $validatedData['color'],
-                'size' => $validatedData['size'],
+        // Use a transaction to ensure data integrity
+        DB::transaction(function () use ($validatedData, $fileNameToStore, $product) {
+            // Update the Product
+            $product->update([
+                'image_url' => $fileNameToStore,
+                'product_name' => $validatedData['product_name'],
                 'description' => $validatedData['description'],
-            ]),
-            'category_id' => $categoryId, // Use the existing or newly created category ID
-        ]);
+                'category_id' => $validatedData['category_dropdown'],
+            ]);
 
-        $productJoined = DB::table('inventory')
-            ->join('product', 'inventory.product_id', '=', 'product.product_id')
-            ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
-            ->join('stockroom', 'stock_transfer.to_stockroom_id', '=', 'stockroom.stockroom_id')
-            ->join('category', 'product.category_id', '=', 'category.category_id')
-            ->leftJoin('product_supplier', 'product.product_id', '=', 'product_supplier.product_id')
-            ->leftJoin('supplier', 'product_supplier.supplier_id', '=', 'supplier.supplier_id')
-            ->select('inventory.*', 'product.*', 'category.*', 'supplier.*', 'stock_transfer.*', 'stockroom.*')
-            ->where('product.product_id', '=',  $product->product_id)
-            ->first();
+            $productJoined = DB::table('inventory')
+                ->join('product', 'inventory.product_id', '=', 'product.product_id')
+                ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
+                ->join('stockroom', 'stock_transfer.to_stockroom_id', '=', 'stockroom.stockroom_id')
+                ->join('category', 'product.category_id', '=', 'category.category_id')
+                ->leftJoin('product_supplier', 'product.product_id', '=', 'product_supplier.product_id')
+                ->leftJoin('supplier', 'product_supplier.supplier_id', '=', 'supplier.supplier_id')
+                ->select('inventory.*', 'product.*', 'category.*', 'supplier.*', 'stock_transfer.*', 'stockroom.*')
+                ->where('product.product_id', '=',  $product->product_id)
+                ->first();
 
-        // Retrieve the stockroom using the joined result, assuming the stockroom ID is available
-        $stockroom = Stockroom::where('stockroom_id', $productJoined->stockroom_id)->firstOrFail();
+            // Retrieve the stockroom using the joined result, assuming the stockroom ID is available
+            $stockroom = Stockroom::where('stockroom_id', $productJoined->stockroom_id)->firstOrFail();
 
-        $stockroom->update([
-            'aisle_number' => $validatedData['aisle_number'],
-            'cabinet_level' => $validatedData['cabinet_level'],
-            // 'product_quantity' => $validatedData['product_quantity'],
-            'category_id' => $categoryId, // Use the existing or newly created category ID
-        ]);
+            $stockroom->update([
+                'category_id' => $validatedData['category_dropdown'],
+            ]);
 
-        // Update the StockTransfer if necessary
-        $stockTransfer = StockTransfer::where('product_id', $product->product_id)->firstOrFail();
-        $stockTransfer->update([
-            'transfer_quantity' => 0,
-            'transfer_date' => now(),
-            'to_stockroom_id' => $stockroom->stockroom_id, // Use the generated stockroom_id
-        ]);
+            // Update the Inventory
+            $inventory = Inventory::where('product_id', $product->product_id)->firstOrFail();
+            $inventory->update([
+                'purchase_price_per_unit' => $validatedData['purchase_price_per_unit'],
+                'reorder_level' => $validatedData['reorder_level'],
+            ]);
+        });
 
-        // Update the Inventory
-        $inventory = Inventory::where('product_id', $product->product_id)->firstOrFail();
-        $inventory->update([
-            // 'purchase_price_per_unit' => $validatedData['purchase_price_per_unit'],
-            // 'sale_price_per_unit' => $validatedData['sale_price_per_unit'],
-            // 'unit_of_measure' => $validatedData['unit_of_measure'],
-            // 'in_stock' => $validatedData['in_stock'],
-            'reorder_level' => $validatedData['reorder_level'],
-        ]);
-    });
-
-    // Redirect or return response after successful update
-    return redirect()->route('purchase_table')->with('success', 'Product updated successfully.');
-}
+        // Redirect or return response after successful update
+        return redirect()->route('supplier_info', $supplierId)->with('success', 'Product updated successfully.');
+    }
 
     /**
      * Remove the specified resource from storage.
@@ -1284,34 +1157,34 @@ public function orderSupplierFilter(Request $request)
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Request $request, $id)
-{
-    // Validate the provided password
-    $validatedData = $request->validate([
-        'password' => 'required|string',
-    ]);
-
-    // Check if the current password matches
-    if (!Hash::check($validatedData['password'], Auth::user()->password)) {
-        // If password is incorrect, redirect back with error
-        return back()->with([
-            'delete_error' => 'The password you entered is incorrect.',
-            'error_product_id' => $id, // Pass the product ID with an error
+    public function destroy(Request $request, $supplierId, $productId)
+    {
+        // Validate the provided password
+        $validatedData = $request->validate([
+            'password' => 'required|string',
         ]);
+
+        // Check if the current password matches
+        if (!Hash::check($validatedData['password'], Auth::user()->password)) {
+            // If password is incorrect, redirect back with error
+            return back()->with([
+                'delete_error' => 'The password you entered is incorrect.',
+                'error_product_id' => $productId, // Pass the product ID with an error
+            ]);
+        }
+
+        // Find and delete the product
+        $product = Product::find($productId);
+
+        if ($product) {
+            $product->delete();
+            // Redirect with success message
+            return redirect()->route('supplier_info', $supplierId)->with('success', 'Product deleted successfully.');
+        }
+
+        // If product not found
+        return back()->withErrors(['error' => 'Product not found.']);
     }
-
-    // Find and delete the product
-    $product = Product::find($id);
-
-    if ($product) {
-        $product->delete();
-        // Redirect with success message
-        return redirect()->route('purchase_table')->with('success', 'Product deleted successfully.');
-    }
-
-    // If product not found
-    return back()->withErrors(['error' => 'Product not found.']);
-}
 
     /**
      * Display a listing of the resource (Order List).
@@ -1334,8 +1207,13 @@ public function orderSupplierFilter(Request $request)
             ->where('role', '=', 'Purchased Manager')
             ->get();
 
+        // Get all backorders
+        $backorders = DB::table('purchase_order')
+            ->where('type', 'Backorder')
+            ->pluck('total_price', 'purchase_order_id'); // Use more precise linking if needed
+
         // populate table with list of purchase order table
-        $orders = PurchaseOrder::with(['order_items.product'])
+        $orders = PurchaseOrder::with(['order_items.product', 'order_items.product.inventory'])
             ->join('order_statuses', 'purchase_order.order_status', 'order_statuses.order_statuses')
             ->join('order_supplier', 'purchase_order.purchase_order_id', '=' ,'order_supplier.purchase_order_id')
             ->join('supplier', 'order_supplier.supplier_id', '=', 'supplier.supplier_id')
@@ -1355,7 +1233,8 @@ public function orderSupplierFilter(Request $request)
                 DB::raw('GROUP_CONCAT(supplier.address SEPARATOR ", ") as supplier_addresses'),
                 'order_statuses.status_name',
                 'user.first_name', 
-                'user.last_name'
+                'user.last_name',
+                'purchase_order.created_at'
             )
             ->groupBy(
                 'purchase_order.purchase_order_id',
@@ -1371,9 +1250,10 @@ public function orderSupplierFilter(Request $request)
                 'user.first_name',
                 'user.last_name'
             )
+            ->orderBy('purchase_order.created_at', 'desc')
             ->get();
-        
-            // Get unique payment methods from orders
+
+        // Get unique payment methods from orders
         $paymentMethods = $orders->pluck('payment_method')->unique()->values();
 
         // Fetch all categories, suppliers, orderStatuses for filtering or display purposes
@@ -1381,8 +1261,60 @@ public function orderSupplierFilter(Request $request)
         $suppliers = Supplier::all();
         $orderStatuses = OrderStatuses::all();
 
+        // Loop through orders and calculate total for each order
+        foreach ($orders as $order) {
+            $order->allMatched = true;
+            $computedTotal = 0;
+
+            // Loop through each order item to check for backordered items (where quantity != delivered_quantity)
+            foreach ($order->order_items as $item) {
+                if ($item->quantity != $item->delivered_quantity) {
+                    // If there's a discrepancy, calculate the backorder total for that product
+                    $order->allMatched = false;
+
+                    // Calculate the price for the backordered quantity
+                    $backorderQuantity = $item->quantity - $item->delivered_quantity;
+                    $computedTotal += $backorderQuantity * $item->product->inventory->purchase_price_per_unit ?? 0;
+                }
+            }
+
+            // Set the computed total for the order if there are any backordered items
+            if ($order->allMatched === false) {
+                $order->computed_total = $computedTotal;
+            }
+
+            // Skip if the order type is already a backorder
+            if ($order->type === 'Backorder') {
+                $order->backorderExists = true;
+                continue;
+            }
+
+            // Check if a backorder already exists for this order based on computed total
+            $supplierId = explode(',', $order->supplier_id)[0];
+
+            // Query to check for an existing backorder
+            $backorderExists = DB::table('purchase_order')
+                ->join('order_items', 'purchase_order.purchase_order_id', '=', 'order_items.purchase_order_id')
+                ->join('inventory', 'order_items.product_id', '=', 'inventory.product_id')
+                ->join('order_supplier', 'purchase_order.purchase_order_id', '=', 'order_supplier.purchase_order_id')
+                ->where('type', 'Backorder')
+                ->where('created_by', $order->created_by)
+                ->where('order_supplier.supplier_id', $supplierId)
+                ->where('purchase_order.purchase_order_id', '!=', $order->purchase_order_id)
+                ->select(DB::raw('SUM(order_items.quantity * inventory.purchase_price_per_unit) as total'))
+                ->groupBy('purchase_order.purchase_order_id')
+                ->get()
+                ->pluck('total')
+                ->contains($computedTotal);
+
+            // Set backorderExists flag based on the query result
+            $order->backorderExists = $backorderExists;
+        }
+
         return view('purchase.order_table', compact('currentUser', 'userSQL', 'orders', 'categories', 'suppliers', 'orderStatuses', 'paymentMethods')); 
     }
+
+
 
     public function updateStatusToOrdered(Request $request)
     {
@@ -1405,21 +1337,6 @@ public function orderSupplierFilter(Request $request)
         return response()->json(['success' => true, 'message' => 'Order status updated successfully.']);
     }
 
-    public function updateOrderStatus(Request $request)
-    {
-        $request->validate([
-            'order_id' => 'required|exists:purchase_order,purchase_order_id',
-            'status' => 'required|exists:order_statuses,order_statuses',
-        ]);
-
-        $order = PurchaseOrder::findOrFail($request->order_id);
-        $order->order_status = $request->status;
-        $order->save();
-
-        return response()->json(['success' => true, 'message' => 'Order status updated successfully.']);
-    }
-
-
     /**
      * Show the form for creating a new resource.
      *
@@ -1436,7 +1353,24 @@ public function orderSupplierFilter(Request $request)
 
         $addresses = Address::all();
 
-        return view('purchase.create_purchase_order', compact('suppliers', 'products', 'addresses'));
+        // Get all products with their suppliers
+        $productsFilter = Product::with(['suppliers', 'inventory'])->get();
+
+        // Get all products from a specific supplier.
+        // Format mapping: supplier_id => [product1, product2, ...]
+        $supplierProductMap = [];
+
+        foreach ($productsFilter as $product) {
+            foreach ($product->suppliers as $supplier) {
+                $supplierProductMap[$supplier->supplier_id][] = [
+                    'product_id' => $product->product_id,
+                    'product_name' => $product->product_name,
+                    'price' => $product->inventory->purchase_price_per_unit
+                ];
+            }
+        }
+
+        return view('purchase.create_purchase_order', compact('suppliers', 'products', 'addresses', 'supplierProductMap'));
     }
 
     public function getProductsBySupplier($supplierId)
@@ -1465,12 +1399,12 @@ public function orderSupplierFilter(Request $request)
         // Validate the incoming request data
         $validatedData = $request->validate([
             'payment_method' => ['required'],
+            'order_type' => ['required'],
             // 'billing_address' => ['nullable'],
             'address_dropdown' => ['required'],
             'address' => ['nullable', 'string', 'max:50'],
-            'total_price' => ['nullable', 'numeric'],
+            'total_price' => ['required', 'numeric'],
             'user_id' => ['required'],
-            'supplier_id' => ['nullable'],
 
             'company_name' => ['nullable'],
             'email' => ['nullable'],
@@ -1493,20 +1427,20 @@ public function orderSupplierFilter(Request $request)
 
         // To be used to create new order and for order items
         $newOrderId = $this->generateId('purchase_order');
-        $initialOrderType = 'Purchase Order';
+        $initialOrderType = 'Purchasing Order';
 
         // Create new order first
-        $order = PurchaseOrder::create([
+        PurchaseOrder::create([
             'purchase_order_id' => $newOrderId,
-            'type' => $initialOrderType,
+            'type' => $validatedData['order_type'],
             'payment_method' => $validatedData['payment_method'],
             'billing_address' => $address,
             'shipping_address' => $address,
-            'total_price' => 0.0,
+            'total_price' => $validatedData['total_price'],
             'created_by' => $validatedData['user_id'],
-            'order_status' => 2,
+            'order_status' => 1,
             'created_at' => Carbon::now(),
-            'updated_at' => null
+            'updated_at' => Carbon::now()
         ]);
 
         // Create new Order_Supplier connect to the current purchase order
@@ -1567,25 +1501,6 @@ public function orderSupplierFilter(Request $request)
             ]);
         }
 
-        $totalPrice = 0.0;  // Initialize total price to 0
-
-        foreach ($productIds as $index => $productId) {
-            // Check if the corresponding product has a valid price in the order_items table
-            $orderItem = OrderItems::where('purchase_order_id', $order->purchase_order_id)
-                ->where('product_id', $productId)
-                ->first();
-
-            if ($orderItem && $orderItem->price) {
-                // If the price is available, calculate the total price
-                $totalPrice += $orderItem->price * $productQuantities[$index];  // Assuming quantities are in the request
-            }
-            // If the price is missing, simply ignore this product and do not add it to the total price
-        }
-
-        // Update the total price of the order
-        $order->total_price = $totalPrice;
-        $order->save();  // Save the updated order
-
         // Create new delivery to store issued_date.
         Delivery::create([
             'delivery_id' => $this->generateId('delivery'),
@@ -1617,7 +1532,23 @@ public function orderSupplierFilter(Request $request)
         // Fetching order suppliers (the linking table for purchase order and suppliers)
         $order_suppliers = OrderSupplier::where('purchase_order_id', $orderId)->get();
 
-        return view('purchase.update_purchase_order', compact('order', 'purchase_products', 'suppliers', 'products', 'addresses', 'order_suppliers'));
+        $productsFilter = Product::with(['suppliers', 'inventory'])->get(); // Get all products with their suppliers
+
+        // Get all products from a specific supplier.
+        // Format mapping: supplier_id => [product1, product2, ...]
+        $supplierProductMap = [];
+
+        foreach ($productsFilter as $product) {
+            foreach ($product->suppliers as $supplier) {
+                $supplierProductMap[$supplier->supplier_id][] = [
+                    'product_id' => $product->product_id,
+                    'product_name' => $product->product_name,
+                    'price' => $product->inventory->purchase_price_per_unit
+                ];
+            }
+        }
+
+        return view('purchase.update_purchase_order', compact('order', 'purchase_products', 'suppliers', 'products', 'addresses', 'order_suppliers', 'supplierProductMap'));
     }
 
     public function update_order(Request $request, $orderId)
@@ -1631,6 +1562,7 @@ public function orderSupplierFilter(Request $request)
             'address_dropdown' => ['required'],
             'billing_address' => ['required'],
             'address' => ['nullable', 'string', 'max:50'],
+            'total_price' => ['required', 'numeric']
         ]);
             
         // Get order 
@@ -1654,9 +1586,10 @@ public function orderSupplierFilter(Request $request)
             'payment_method' => $validatedData['payment_method'],
             'billing_address' => $validatedData['billing_address'],
             'shipping_address' => $address,
-            'total_price' => 0,
+            'total_price' => $validatedData['total_price'],
             'created_by' => $validatedData['user_id'],
             'order_status' => 1,
+            'updated_at' => Carbon::now()
         ]);
 
         // Get all the product of the specified order.
@@ -1672,7 +1605,7 @@ public function orderSupplierFilter(Request $request)
         // Create new Order Items connected to the currect purchase order       
         $productIds = $request->product_id;
         $productQuantities = $request->product_quantity;
-        $productPrices = $request->product_combined_price;
+        $productPrices = $request->product_price;
             
         foreach ($productIds as $index => $productId) {
             OrderItems::create([
@@ -1743,51 +1676,48 @@ public function orderSupplierFilter(Request $request)
     public function updateOrderChanges(Request $request)
     {
         $order = PurchaseOrder::with(['order_items.product.inventory'])
-            ->find($request->purchase_order_id);
+            ->findOrFail($request->purchase_order_id);
 
-            // Get all the products from the request
-            $products = $request->products;
+        $products = $request->products;
 
-            foreach ($order->order_items as $item) {
-                $productId = $item->product_id;
+        foreach ($order->order_items as $item) {
+            $productId = $item->product_id;
 
-                // Check if the product data exists
-                if (isset($products[$productId])) {
-                    $data = $products[$productId];
+            // Check if this product is included in the request
+            if (isset($products[$productId])) {
+                $data = $products[$productId];
 
-                    // Update the delivered quantity
-                    $item->delivered_quantity = $data['delivered_quantity'] ?? $item->delivered_quantity;
+                // Update fields on order_items table
+                $item->delivered_quantity = (int) ($data['delivered_quantity'] ?? $item->delivered_quantity);
+                $item->damaged_quantity = isset($data['damaged_quantity']) ? (int) $data['damaged_quantity'] : null;
+                $item->remarks = $data['remarks'] ?? null;
+                $item->save();
 
-                    // Get the inventory related to the product
-                    $inventory = $item->product->inventory;
-
-                     // If inventory exists, update the 'in_stock' column
-                    if ($inventory) {
-                        $inventory->in_stock = $inventory->in_stock + $item->delivered_quantity; // Example update logic
-                        $inventory->save();
-                    }
-
-                    $item->save();
+                // Update inventory
+                $inventory = $item->product->inventory;
+                if ($inventory) {
+                    $inventory->in_stock += $item->delivered_quantity;
+                    $inventory->save();
                 }
             }
+        }
 
-            $order->update([
-                'order_status' => 3,
-            ]);
+        // Mark order as delivered
+        $order->update([
+            'order_status' => 3,
+        ]);
 
-            // find delivery with foreign key: purchase_order_id
-            $delivery = Delivery::where('purchase_order_id', $request->purchase_order_id)->first();
+        // Create or update delivery metadata
+        $delivery = Delivery::firstOrNew([
+            'purchase_order_id' => $order->purchase_order_id
+        ]);
 
-            if ($delivery) {
-                $delivery->update([
-                    'date_delivered' => now()
-                ]);
-            }
-
+        $delivery->date_delivered = now();
+        $delivery->save();
 
         return redirect()->route('purchase_order')->with('success', 'Purchase order successfully updated.');
-
     }
+
 
     /**
      * Creates Backorder.
@@ -1797,7 +1727,6 @@ public function orderSupplierFilter(Request $request)
      */
     public function createBackorderRequest(Request $request)
     {
-        dd($request);
         $validated = $request->validate([
             'order_id' => 'required|integer|exists:purchase_order,purchase_order_id',  // Ensure order exists
             'order_type' => 'required|string',  // Allow specific types
@@ -1836,14 +1765,13 @@ public function orderSupplierFilter(Request $request)
         // Create the backorder record
         $order = PurchaseOrder::create([
             'purchase_order_id' => $newBackorderId,
-            'order_type' => $orderType,
+            'type' => $orderType,
             'payment_method' => $validated['payment_method'],
             'billing_address' => $validated['billing_address'],
             'shipping_address' => $validated['shipping_address'],
             'total_price' => $totalPrices,
             'created_by' => $validated['created_by'],
-            'supplier_id' => $validated['supplier_id'],
-            'order_status' => 2,
+            'order_status' => 1,
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now()
         ]);
@@ -1857,7 +1785,6 @@ public function orderSupplierFilter(Request $request)
             ]);
             $orderSupplier->save();
         }
-        
 
         // Create new Order Items connected to the new backorder
         foreach ($productIds as $index => $productId) {
@@ -1872,5 +1799,193 @@ public function orderSupplierFilter(Request $request)
 
         return response()->json(['message' => 'Backorder request successfully created.']);
     }
-}
 
+    public function supplier_list()
+    {
+        $suppliers = Supplier::all();
+
+        return view('purchase.suppliers_table', compact(['suppliers']));
+    }
+
+    public function supplier_info($id)
+    {
+        $supplier = Supplier::with(['products.category', 'products.inventory'])->find($id);
+        $products = $supplier->products;
+
+        // Fetch all categories for filtering or display purposes
+        $categories = Category::all();
+
+        return view('purchase.supplier_info', compact(['supplier', 'products', 'categories']));
+    }
+
+    public function create_supplier()
+    {
+
+
+       return view('purchase.create_supplier');
+    }
+
+    public function store_supplier(Request $request)
+    {
+        // Validate the incoming request data
+        $validatedData = $request->validate([
+            'company_name' => ['required', 'string', 'max:30'],
+            'email' => ['required', 'email', 'max:30'],
+            'mobile_number' => ['required', 'regex:/^[0-9]{10,11}$/'],
+            'address' => ['required', 'string', 'max:100'],
+            'contact_person' => ['required', 'string', 'max:30']
+        ]);
+        
+
+        Supplier::create([
+            'supplier_id' => $this->generateId('supplier'),
+            'company_name' => $validatedData['company_name'],
+            'contact_person' => $validatedData['contact_person'],
+            'mobile_number' => $validatedData['mobile_number'],
+            'email' => $validatedData['email'],
+            'address' => $validatedData['address'],
+        ]);
+
+        return redirect()->route('supplier_list')->with('success', 'Supplier successfully added.');
+    }
+
+    public function edit_supplier($id)
+    {
+        $supplier = Supplier::with('products')->find($id);
+        $products = $supplier->products;
+
+        return view('purchase.update_supplier', compact(['supplier', 'products']));
+    }
+
+    public function update_supplier(Request $request, $id)
+    {
+        // Validate the incoming request data
+        $validatedData = $request->validate([
+            'company_name' => ['required', 'string', 'max:30'],
+            'email' => ['required', 'email', 'max:30'],
+            'mobile_number' => ['required', 'regex:/^[0-9]{10,11}$/'],
+            'address' => ['required', 'string', 'max:100'],
+            'contact_person' => ['required', 'string', 'max:30']
+        ]);
+
+        $supplier = Supplier::find($id);
+
+        $supplier->update([
+            'company_name' => $validatedData['company_name'],
+            'contact_person' => $validatedData['contact_person'],
+            'mobile_number' => $validatedData['mobile_number'],
+            'email' => $validatedData['email'],
+            'address' => $validatedData['address'],
+        ]);
+
+        return redirect()->route('supplier_list')->with('success', 'Supplier successfully updated.');
+    }
+
+    public function delete_supplier(Request $request, $id)
+    {
+        $validatedData = $request->validate([
+            'password' => 'required|string',
+        ]);
+    
+        if (!Hash::check($validatedData['password'], Auth::user()->password)) {
+            return redirect()->back()->with('delete_error', 'Incorrect password. Supplier deletion cancelled.')
+                                    ->with('error_supplier_id', $id);
+        }
+
+        try {
+            $supplier = Supplier::find($id);
+            $supplier->delete();
+            DB::commit();
+
+            return redirect()->route('supplier_list')->with('success', 'Supplier successfully deleted.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->back()->with('error', 'An error occurred while deleting the supplier: ' . $e->getMessage());
+        }
+    }
+
+    public function create_reorder(Request $request, $supplier_id)
+    {
+        if (!Auth::check()) {
+            return redirect('/login')->withErrors('You must be logged in.');
+        }
+
+        // Step 1: Fetch all products that need to be reordered (in stock is less than reorder level)
+        $products = DB::table('product')
+            ->join('inventory', 'product.product_id', '=', 'inventory.product_id')
+            ->join('product_supplier', 'product.product_id', '=', 'product_supplier.product_id')
+            ->join('supplier', 'product_supplier.supplier_id', '=', 'supplier.supplier_id')
+            ->where('product_supplier.supplier_id', $supplier_id)
+            ->whereColumn('inventory.in_stock', '<', 'inventory.reorder_level')
+            ->select('product.*', DB::raw('inventory.purchase_price_per_unit as price'), 'inventory.in_stock', 'inventory.reorder_level', 'supplier.supplier_id', 'supplier.company_name', 'supplier.address', 'product_supplier.supplier_id')
+            ->get();
+        
+        $supplier = $products->first()
+            ? (object) [
+                'supplier_id' => $products->first()->supplier_id,
+                'company_name' => $products->first()->company_name,
+                'address' => $products->first()->address,
+            ]
+            : null;
+            
+        if ($products->isEmpty()) {
+            return redirect()->back()->withErrors('No products need reordering.');
+        }
+
+        // Step 2: Group products by supplier
+        $groupedBySupplier = $products->groupBy('supplier_id');
+
+        DB::transaction(function () use ($groupedBySupplier, $supplier, $request) {
+            foreach ($groupedBySupplier as $supplierId => $products) {
+
+                // Step 3: Create a single purchase order for each supplier
+                $purchaseOrderId = DB::table('purchase_order')->insertGetId([
+                    'purchase_order_id' => $this->generateId('purchase_order'),
+                    'type' => 'Purchasing Order',
+                    'payment_method' => $request->payment_method,
+                    'billing_address' => $supplier->address,
+                    'shipping_address' => $request->shipping_address,
+                    'total_price' => 0, // To be calculated later
+                    'created_by' => Auth::id(),
+                    'order_status' => 1, // "To order"
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                $totalPrice = 0;
+
+                // Step 4: Loop through products and add them to the purchase order
+                foreach ($products as $product) {
+                    $unitsToReorder = max(0, ($product->reorder_level - $product->in_stock) + $this->reorderBuffer);
+                    $lineTotal = ($product->price ?? 0) * $unitsToReorder;
+
+                    DB::table('order_items')->insert([
+                        'purchase_order_id' => $purchaseOrderId,
+                        'product_id' => $product->product_id,
+                        'quantity' => $unitsToReorder,
+                        'price' => $lineTotal,
+                        'delivered_quantity' => 0,
+                    ]);
+
+                    $totalPrice += $lineTotal;
+                }
+
+                // Step 5: Update the total price of the purchase order
+                DB::table('purchase_order')
+                    ->where('purchase_order_id', $purchaseOrderId)
+                    ->update(['total_price' => $totalPrice]);
+
+                // Step 6: Create order_supplier (order_supplier table)
+                // Link purchase_order_id and supplier_id in the order_supplier table
+                DB::table('order_supplier')->insert([
+                    'order_supplier_id' => $this->generateId('order_supplier'),
+                    'purchase_order_id' => $purchaseOrderId,
+                    'supplier_id' => $supplierId,
+                ]);
+            }
+        });
+
+        return redirect()->back()->with('success', 'Reorder created successfully.');
+    }
+}

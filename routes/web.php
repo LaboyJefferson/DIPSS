@@ -105,32 +105,46 @@ Route::get('category_filter', [InventoryController::class, 'CategoryFilter'])->n
 Route::get('supplier_filter', [InventoryController::class, 'supplierFilter'])->name('supplier_filter');
 
 use App\Http\Controllers\PurchaseController;
-Route::resource('purchase', PurchaseController::class);
-Route::get('purchase_table', [PurchaseController::class, 'index'])->name('purchase_table');
-Route::post('details', [PurchaseController::class, 'getSupplierDetails']);
-Route::get('create', [PurchaseController::class, 'create'])->name('create_product');
-Route::post('restock', [PurchaseController::class, 'restock'])->name('restock_product');
-Route::post('restock_store_product', [PurchaseController::class, 'restockStoreProduct'])->name('restock_store_product');
-Route::get('edit_product/{id}', [PurchaseController::class, 'edit'])->name('edit_product');
-Route::post('update_product/{id}', [PurchaseController::class, 'update'])->name('update_product');
-Route::delete('delete/{id}', [PurchaseController::class, 'destroy'])->name('delete_product');
-Route::get('purchase_order',[PurchaseController::class, 'order_list'])->name('purchase_order');
-Route::get('create_purchase_order', [PurchaseController::class, 'create_purchase_order'])->name('create_purchase_order');
-Route::get('supplier/{supplierId}/products', [PurchaseController::class, 'getProductsBySupplier']);
-Route::get('supplier/{supplierId}', [PurchaseController::class, 'getSupplierAddress']); // Get supplier address at create_purchase_order
-Route::post('store/order', [PurchaseController::class, 'storeOrder'])->name('store_order');
-Route::get('edit_purchase_order/{id}', [PurchaseController::class, 'editOrder'])->name('edit_order');
-Route::post('update_order/{id}', [PurchaseController::class, 'update_order'])->name('update_order');
-Route::delete('purchase_order/{id}',[PurchaseController::class, 'destroyOrder'])->name('delete_order');
-Route::post('purchase_order/update_order_status', [PurchaseController::class, 'updateOrderStatus'])->name('update_order_status');
-Route::post('/purchase_order/change-status', [PurchaseController::class, 'updateStatusToOrdered'])->name('change_status_to_order');
-Route::post('/purchase_order/update_order_changes', [PurchaseController::class, 'updateOrderChanges'])->name('update_order_changes');
-Route::post('/purchase_order/create_backorder_request', [PurchaseController::class, 'createBackorderRequest'])->name('create_backorder_request');
+use App\Models\PurchaseOrder;
+
+    Route::resource('purchase', PurchaseController::class);
+    Route::get('purchase_table', [PurchaseController::class, 'index'])->name('purchase_table');
+    Route::post('details', [PurchaseController::class, 'getSupplierDetails']);
+    Route::get('create/{id}', [PurchaseController::class, 'create'])->name('create_product');
+    Route::post('store/{id}/product', [PurchaseController::class, 'store'])->name('store_product');
+    Route::post('restock', [PurchaseController::class, 'restock'])->name('restock_product');
+    Route::post('restock_store_product', [PurchaseController::class, 'restockStoreProduct'])->name('restock_store_product');
+    Route::get('/edit_product/{supplier_id}/{product_id}', [PurchaseController::class, 'edit'])->name('edit_product');
+    Route::post('update_product/{supplier_id}/{product_id}', [PurchaseController::class, 'update'])->name('update_product');
+    Route::delete('delete/{supplier_id}/{product_id}', [PurchaseController::class, 'destroy'])->name('delete_product');
+    Route::get('purchase_order',[PurchaseController::class, 'order_list'])->name('purchase_order');
+    Route::get('create_purchase_order', [PurchaseController::class, 'create_purchase_order'])->name('create_purchase_order');
+    Route::get('supplier/{supplierId}/products', [PurchaseController::class, 'getProductsBySupplier']);
+    Route::get('supplier/{supplierId}', [PurchaseController::class, 'getSupplierAddress']); // Get supplier address at create_purchase_order
+    Route::post('store/order', [PurchaseController::class, 'storeOrder'])->name('store_order');
+    Route::get('edit_purchase_order/{id}', [PurchaseController::class, 'editOrder'])->name('edit_order');
+    Route::post('update_order/{id}', [PurchaseController::class, 'update_order'])->name('update_order');
+    Route::delete('purchase_order/{id}',[PurchaseController::class, 'destroyOrder'])->name('delete_order');
+    Route::post('purchase_order/update_order_status', [PurchaseController::class, 'updateOrderStatus'])->name('update_order_status');
+    Route::post('/purchase_order/change-status', [PurchaseController::class, 'updateStatusToOrdered'])->name('change_status_to_order');
+    Route::post('/purchase_order/update_order_changes', [PurchaseController::class, 'updateOrderChanges'])->name('update_order_changes');
+    Route::post('/purchase_order/create_backorder_request', [PurchaseController::class, 'createBackorderRequest'])->name('create_backorder_request');
+    Route::get('suppliers_table', [PurchaseController::class, 'supplier_list'])->name('supplier_list');
+    Route::get('suppliers_table/create_supplier', [PurchaseController::class, 'create_supplier'])->name('create_supplier');
+    Route::post('suppliers_table/create_supplier/store', [PurchaseController::class, 'store_supplier'])->name('store_supplier');
+    Route::get('suppliers_table/{id}/supplier_info', [PurchaseController::class, 'supplier_info'])->name('supplier_info');
+    Route::get('suppliers_table/{id}/edit_supplier', [PurchaseController::class, 'edit_supplier'])->name('edit_supplier');
+    Route::post('suppliers_table/{id}/update', [PurchaseController::class, 'update_supplier'])->name('update_supplier');
+    Route::delete('suppliers_table/{id}/delete',[PurchaseController::class, 'delete_supplier'])->name('delete_supplier');
+    Route::get('/create-reorder/{supplier_id}', [PurchaseController::class, 'create_reorder'])->name('create_reorder');
+
+
 
 
 //filter products table
 Route::get('filter_product_name', [PurchaseController::class, 'productNameFilter'])->name('filter_product_name');
 Route::get('filter_category', [PurchaseController::class, 'CategoryFilter'])->name('filter_category');
+Route::get('filter_category2/{supplierId}', [PurchaseController::class, 'CategoryFilter2'])->name('filter_category_supplier_info');
 Route::get('filter_supplier', [PurchaseController::class, 'supplierFilter'])->name('filter_supplier');
 Route::get('filter_store_restock', [PurchaseController::class, 'storeRestockFilter'])->name('filter_store_restock');
 Route::get('filter_stockroom_restock', [PurchaseController::class, 'stockroomRestockFilter'])->name('filter_stockroom_restock');

@@ -2,136 +2,136 @@
 @include('common.navbar')
 
 @section('content')
-<style>
-    body {
-        background-image: url('/storage/images/bg-photo.jpeg');
-        background-size: cover; /* Cover the entire viewport */
-        background-position: center; /* Center the background image */
-        background-repeat: no-repeat; /* Prevent the image from repeating */
-        background-color: #1a1a1a; /* Dark background */
-        color: #fff; /* Light text color */
-    }
+    <style>
+        body {
+            background-image: url('/storage/images/bg-photo.jpeg');
+            background-size: cover; /* Cover the entire viewport */
+            background-position: center; /* Center the background image */
+            background-repeat: no-repeat; /* Prevent the image from repeating */
+            background-color: #1a1a1a; /* Dark background */
+            color: #fff; /* Light text color */
+        }
 
-    h4.h2 {
-        color: #fff;
+        h4.h2 {
+            color: #fff;
 
-    }
+        }
 
-    .table th {
-        font-size: 0.95em;
-    }
+        .table th {
+            font-size: 0.95em;
+        }
 
-    .table th, td {
-        background-color: #565656 !important; /* Set background color for all table headers */
-        color: #ffffff !important;
-    }
+        .table th, td {
+            background-color: #565656 !important; /* Set background color for all table headers */
+            color: #ffffff !important;
+        }
 
-    .card {
-        
-        background-color: #565656; /* Card background */
-        border: none; /* Remove border */
-        border-radius: 8px; /* Rounded corners */
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); 
-    }
-    .input-group-text {
-        background-color: #3a8f66; /* input group background */
-        border: none; /* Remove borders */
-        color: #fff; /* White text */
-    }
-    .btn-primary {
-        background-color: #3a8f66; /* Green button */
-        color: #fff; /* White text */
-        border: none; /* Remove button borders */
-    }
-    .btn-primary:hover {
-        background-color: #2f6b5a; /* Darker green on hover */
-    }
-    .btn-secondary {
-        background-color: #3a8f66; /* Dark background for role selection */
-        color: #fff; /* White text */
-        border: none;
-    }
-    .btn-secondary:hover {
-        background-color: #2f6b5a; /* Darker green on hover */
-    }
-    .form-control {
-        background-color: #fff; /* White input background */
-        color: #000; /* Black text */
-        border: 1px solid #444; /* Subtle border */
-    }
-    .form-control:focus {
-        background-color: #fff; /* Focus background */
-        color: #000; /* Black text */
-        border-color: #3a8f66; /* Green border on focus */
-        box-shadow: none; /* Remove default shadow */
-    }
+        .card {
+            
+            background-color: #565656; /* Card background */
+            border: none; /* Remove border */
+            border-radius: 8px; /* Rounded corners */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); 
+        }
+        .input-group-text {
+            background-color: #3a8f66; /* input group background */
+            border: none; /* Remove borders */
+            color: #fff; /* White text */
+        }
+        .btn-primary {
+            background-color: #3a8f66; /* Green button */
+            color: #fff; /* White text */
+            border: none; /* Remove button borders */
+        }
+        .btn-primary:hover {
+            background-color: #2f6b5a; /* Darker green on hover */
+        }
+        .btn-secondary {
+            background-color: #3a8f66; /* Dark background for role selection */
+            color: #fff; /* White text */
+            border: none;
+        }
+        .btn-secondary:hover {
+            background-color: #2f6b5a; /* Darker green on hover */
+        }
+        .form-control {
+            background-color: #fff; /* White input background */
+            color: #000; /* Black text */
+            border: 1px solid #444; /* Subtle border */
+        }
+        .form-control:focus {
+            background-color: #fff; /* Focus background */
+            color: #000; /* Black text */
+            border-color: #3a8f66; /* Green border on focus */
+            box-shadow: none; /* Remove default shadow */
+        }
 
-    .form-control {
-        background-color: #212529; /* Change input background */
-        color: #fff; /* White text */
-        border: 1px solid #444; 
-        border-radius: 4px; /* Optional: Rounded corners */
-    }
-    .form-control:focus {
-        background-color: #212529; 
-        color: #fff; 
-        border-color: #3a8f66; 
-        box-shadow: none; 
-    }
+        .form-control {
+            background-color: #212529; /* Change input background */
+            color: #fff; /* White text */
+            border: 1px solid #444; 
+            border-radius: 4px; /* Optional: Rounded corners */
+        }
+        .form-control:focus {
+            background-color: #212529; 
+            color: #fff; 
+            border-color: #3a8f66; 
+            box-shadow: none; 
+        }
 
-    /* Placeholder styling */
-    .form-control::placeholder {
-        color: #bbb; /* Light grey for placeholder text */
-        opacity: 1; /* Ensures the opacity is fully opaque */
-    }
-    .text {
-        color: #fff;
-    }
+        /* Placeholder styling */
+        .form-control::placeholder {
+            color: #bbb; /* Light grey for placeholder text */
+            opacity: 1; /* Ensures the opacity is fully opaque */
+        }
+        .text {
+            color: #fff;
+        }
 
-    /* Custom styling for the select dropdown */
-    .custom-select select {
-        background-color: #212529; /* Black background for select */
-        color: white; /* White text */
-        border: 1px solid #444; /* Subtle border */
-        appearance: none; /* Remove default arrow */
-        border-radius: 4px;
-        position: relative;
-    }
+        /* Custom styling for the select dropdown */
+        .custom-select select {
+            background-color: #212529; /* Black background for select */
+            color: white; /* White text */
+            border: 1px solid #444; /* Subtle border */
+            appearance: none; /* Remove default arrow */
+            border-radius: 4px;
+            position: relative;
+        }
 
-    /* Add a custom arrow using a background image or pseudo-element */
-    .custom-select {
-        position: relative;
-    }
+        /* Add a custom arrow using a background image or pseudo-element */
+        .custom-select {
+            position: relative;
+        }
 
-    .custom-select::after {
-        content: '▼'; /* Custom arrow */
-        color: white; /* White arrow */
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        pointer-events: none;
-    }
+        .custom-select::after {
+            content: '▼'; /* Custom arrow */
+            color: white; /* White arrow */
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
 
-    /* Style dropdown options */
-    .custom-select select option {
-        background-color: #333; /* Dark background for options */
-        color: white; /* White text */
-        padding: 8px;
-    }
+        /* Style dropdown options */
+        .custom-select select option {
+            background-color: #333; /* Dark background for options */
+            color: white; /* White text */
+            padding: 8px;
+        }
 
-    /* On hover, options can change color */
-    .custom-select select option:hover {
-        background-color: #3a8f66; /* Slightly greenish background on hover */
-        color: white;
-    }
+        /* On hover, options can change color */
+        .custom-select select option:hover {
+            background-color: #3a8f66; /* Slightly greenish background on hover */
+            color: white;
+        }
 
-    /* for dropdwonn supplier */
-    .d-none {
-        display: none;
-    }
+        /* for dropdwonn supplier */
+        .d-none {
+            display: none;
+        }
 
-</style>
+    </style>
 
 @if(Auth::user()->role == 'Purchase Manager') 
     <div class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
