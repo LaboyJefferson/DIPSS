@@ -4,10 +4,14 @@
 --
 -- Host: 127.0.0.1
 <<<<<<< HEAD
+<<<<<<< HEAD
 -- Generation Time: May 19, 2025 at 03:24 AM
 =======
 -- Generation Time: May 18, 2025 at 05:55 PM
 >>>>>>> dfd52ded42d9940d944f9a4302f5087fd7660ef3
+=======
+-- Generation Time: May 18, 2025 at 05:55 PM
+>>>>>>> dfd52de (purchasing - v1)
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -107,6 +111,7 @@ CREATE TABLE `inventory` (
   `reorder_level` int(6) NOT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
 <<<<<<< HEAD
+<<<<<<< HEAD
   `updated_at` timestamp NULL DEFAULT NULL,
   `profit_margin` decimal(5,2) DEFAULT NULL,
   `tax_rate` decimal(5,2) DEFAULT NULL,
@@ -114,6 +119,9 @@ CREATE TABLE `inventory` (
 =======
   `updated_at` timestamp NULL DEFAULT NULL
 >>>>>>> dfd52ded42d9940d944f9a4302f5087fd7660ef3
+=======
+  `updated_at` timestamp NULL DEFAULT NULL
+>>>>>>> dfd52de (purchasing - v1)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -166,7 +174,10 @@ INSERT INTO `inventory` (`inventory_id`, `product_id`, `purchase_price_per_unit`
 (85845553, 84495846, 6400.00, 7635.00, 'pcs', 22, 5, '2024-12-06 01:36:05', '2024-12-08 07:22:09'),
 (95154263, 65174824, 24.00, 32.00, 'pcs', 24, 1, '2024-12-02 14:20:39', '2024-12-08 07:22:09'),
 (95974033, 15076522, 15000.00, 18000.00, 'pcs', 25, 8, '2024-12-06 00:19:22', '2025-05-18 15:13:05');
+<<<<<<< HEAD
 >>>>>>> dfd52ded42d9940d944f9a4302f5087fd7660ef3
+=======
+>>>>>>> dfd52de (purchasing - v1)
 
 -- --------------------------------------------------------
 
@@ -448,6 +459,7 @@ CREATE TABLE `sales` (
   `user_id` int(8) NOT NULL,
   `total_amount` decimal(10,2) NOT NULL,
 <<<<<<< HEAD
+<<<<<<< HEAD
   `sales_date` timestamp NULL DEFAULT NULL,
   `items` text DEFAULT NULL,
   `subtotal` decimal(10,2) DEFAULT NULL,
@@ -457,6 +469,9 @@ CREATE TABLE `sales` (
 =======
   `sales_date` timestamp NULL DEFAULT NULL
 >>>>>>> dfd52ded42d9940d944f9a4302f5087fd7660ef3
+=======
+  `sales_date` timestamp NULL DEFAULT NULL
+>>>>>>> dfd52de (purchasing - v1)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -493,7 +508,10 @@ INSERT INTO `sales` (`sales_id`, `user_id`, `total_amount`, `sales_date`) VALUES
 (75275548, 20240000, 185.00, '2024-12-02 08:50:15'),
 (85216851, 20240000, 160.00, '2024-12-10 12:50:41'),
 (94080478, 20240000, 133.00, '2024-12-02 14:37:04');
+<<<<<<< HEAD
 >>>>>>> dfd52ded42d9940d944f9a4302f5087fd7660ef3
+=======
+>>>>>>> dfd52de (purchasing - v1)
 
 -- --------------------------------------------------------
 

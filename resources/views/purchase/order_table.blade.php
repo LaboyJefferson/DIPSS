@@ -118,186 +118,158 @@
                         <a class="btn btn-success" href="{{ route('create_purchase_order') }}">+ Create Order</a>
                     </div>
 
-
-
-
-
-{{-- Generate Report --}}
-<form method="POST" action="{{ url('purchased_report') }}" enctype="multipart/form-data" class="mb-4 report-form" id="reportForm">
-    @csrf
-    <div class="input-group mb-3">
-        <input type="date" class="custom-date-picker" id="startDate" name="start_date" class="form-control" placeholder="Start Date" max="{{ date('Y-m-d') }}"  required>
-        <span class="input-group-text">TO</span>
-        <input type="date" class="custom-date-picker" id="endDate" name="end_date" class="form-control" placeholder="End Date" max="{{ date('Y-m-d') }}"  required>
-        <button type="submit" class="btn btn-success ms-2">
-            <i class="fa-solid fa-print"></i> Generate Report
-        </button>
-    </div>
-</form>
-<form method="POST" action="{{ route('generate_purchased_filter_report') }}" enctype="multipart/form-data" class="mb-4 report-form" id="reportForm">
-    @csrf
-    <div class="input-group mb-3">
-        <input type="hidden" name="user_ids" value="{{ implode(',', request('user_ids', [])) }}">
-        <input type="hidden" name="letters" value="{{ implode(',', request('letters', [])) }}">
-        <input type="hidden" name="supplier_ids" value="{{ implode(',', request('supplier_ids', [])) }}">
-        <input type="hidden" name="payment_methods" value="{{ implode(',', request('payment_methods', [])) }}">
-        
-        <!-- Wrap the button inside a div and apply a CSS class for alignment -->
-        <div class="ms-auto">
-            <button type="submit" class="btn btn-success">
-                <i class="fa-solid fa-print"></i> Generate Filter Report
-            </button>
-        </div>
-    </div>
-</form>
-
-<!-- Dropdown with Buttons -->
-<div class="row d-flex justify-content-end">
-    <div class="col-auto">
-        <div class="dropdown">
-
-            <!-- Display all -->
-            <div class="btn-group">
-                <a type="button" class="btn btn-success mb-2" href="{{ route('purchase_order') }}">Display All</a>
-            </div>
-
-             <!-- Created By Dropdown -->
-             <div class="btn-group">
-                <button class="btn btn-success dropdown-toggle mb-2" type="button" id="createdByDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    Created By
-                </button>
-                <div class="dropdown-menu p-3" style="width: 250px">
-                    <form id="createdByFilterForm" method="GET" action="{{ route('created_by_filter') }}">
-                        @foreach($userSQL as $user)
-                            <div class="form-check">
-                                <input type="checkbox" name="user_ids[]" value="{{ $user->user_id }}" class="form-check-input" id="user_{{ $user->user_id }}">
-                                <label class="form-check-label" for="user_{{ $user->user_id }}">
-                                    {{ $user->first_name }} {{ $user->last_name }}
-                                </label>
+                    {{-- Generate Report --}}
+                    <form method="POST" action="{{ url('purchased_report') }}" enctype="multipart/form-data" class="mb-4 report-form" id="reportForm">
+                        @csrf
+                        <div class="input-group mb-3">
+                            <input type="date" class="custom-date-picker" id="startDate" name="start_date" class="form-control" placeholder="Start Date" max="{{ date('Y-m-d') }}"  required>
+                            <span class="input-group-text">TO</span>
+                            <input type="date" class="custom-date-picker" id="endDate" name="end_date" class="form-control" placeholder="End Date" max="{{ date('Y-m-d') }}"  required>
+                            <button type="submit" class="btn btn-success ms-2">
+                                <i class="fa-solid fa-print"></i> Generate Report
+                            </button>
+                        </div>
+                    </form>
+                    <form method="POST" action="{{ route('generate_purchased_filter_report') }}" enctype="multipart/form-data" class="mb-4 report-form" id="reportForm">
+                        @csrf
+                        <div class="input-group mb-3">
+                            <input type="hidden" name="user_ids" value="{{ implode(',', request('user_ids', [])) }}">
+                            <input type="hidden" name="letters" value="{{ implode(',', request('letters', [])) }}">
+                            <input type="hidden" name="supplier_ids" value="{{ implode(',', request('supplier_ids', [])) }}">
+                            <input type="hidden" name="payment_methods" value="{{ implode(',', request('payment_methods', [])) }}">
+                            
+                            <!-- Wrap the button inside a div and apply a CSS class for alignment -->
+                            <div class="ms-auto">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fa-solid fa-print"></i> Generate Filter Report
+                                </button>
                             </div>
-                        @endforeach
-                        <div class="text-center mt-2">
-                            <button type="submit" class="btn btn-success btn-sm">Filter</button>
                         </div>
                     </form>
-                </div>
-            </div>
-            
-            
-
-           <!-- Product Name Dropdown -->
-            <div class="btn-group">
-                <button class="btn btn-success dropdown-toggle mb-2" type="button" id="productNameDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    Product Name
-                </button>
-                <ul class="dropdown-menu p-3" aria-labelledby="productNameDropdown" style="min-width: 250px;">
-                    <form id="letterFilterForm" method="GET" action="{{ route('order_product_filter') }}">
-                        <div class="row">
-                            @foreach(range('A', 'Z') as $letter)
-                                <div class="col-4">
-                                    <label class="dropdown-item">
-                                        <input type="checkbox" name="letters[]" value="{{ $letter }}"> {{ $letter }}
-                                    </label>
-                                </div>
-                            @endforeach
-                        </div>
-                        <div class="text-center mt-2">
-                            <button type="submit" class="btn btn-success btn-sm">Filter</button>
-                        </div>
-                    </form>
-                </ul>
-            </div>
-            
-            <!-- Supplier Dropdown -->
-            <div class="btn-group">
-                <button class="btn btn-success dropdown-toggle mb-2" type="button" id="supplierDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    Supplier
-                </button>
-                <ul class="dropdown-menu" aria-labelledby="supplierDropdown">
-                    <form id="filterForm" method="GET" action="{{ route('order_supplier_filter') }}">
-                        @foreach($suppliers as $supplier)
-                            <li>
-                                <label class="dropdown-item">
-                                    <input type="checkbox" name="supplier_ids[]" value="{{ $supplier->supplier_id }}"> 
-                                    {{ $supplier->company_name }}
-                                </label>
-                            </li>
-                        @endforeach
-                        <li class="text-center mt-2">
-                            <button type="submit" class="btn btn-success btn-sm">Filter</button>
-                        </li>
-                    </form>
-                </ul>
-            </div>
-
-            <!-- Payment Method Dropdown -->
-            <div class="btn-group">
-                <button class="btn btn-success dropdown-toggle mb-2" type="button" id="paymentMethodDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    Payment Method
-                </button>
-                <ul class="dropdown-menu" aria-labelledby="paymentMethodDropdown">
-                    <form id="filterForm" method="GET" action="{{ route('payment_method_filter') }}">
-                        @foreach($paymentMethods as $payment)
-                            <li>
-                                <label class="dropdown-item">
-                                    <input type="checkbox" name="payment_methods[]" value="{{$payment}}"> 
-                                    {{$payment}}
-                                </label>
-                            </li>
-                        @endforeach
-                        <li class="text-center mt-2">
-                            <button type="submit" class="btn btn-success btn-sm">Filter</button>
-                        </li>
-                    </form>
-                </ul>
-            </div>
-
-            <!-- Order Status Dropdown -->
-            <div class="btn-group">
-                <button class="btn btn-success dropdown-toggle mb-2" type="button" id="orderStatusDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    Order Status
-                </button>
-                <ul class="dropdown-menu" aria-labelledby="orderStatusDropdown">
-                    <form id="filterForm" method="GET" action="{{ route('order_status_filter') }}">
-                        @foreach($orderStatuses as $status)
-                            <li>
-                                <label class="dropdown-item">
-                                    <input type="checkbox" name="order_status[]" value="{{$status->order_statuses}}"> 
-                                    {{$status->status_name}}
-                                </label>
-                            </li>
-                        @endforeach
-                        <li class="text-center mt-2">
-                            <button type="submit" class="btn btn-success btn-sm">Filter</button>
-                        </li>
-                    </form>
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-
-
-
-
-
-
 
                     <!-- Dropdown with Buttons -->
-                    {{-- <div class="row d-flex justify-content-end">
+                    <div class="row d-flex justify-content-end">
                         <div class="col-auto">
                             <div class="dropdown">
+
                                 <!-- Display all -->
                                 <div class="btn-group">
                                     <a type="button" class="btn btn-success mb-2" href="{{ route('purchase_order') }}">Display All</a>
                                 </div>
 
+                                <!-- Created By Dropdown -->
+                                <div class="btn-group">
+                                    <button class="btn btn-success dropdown-toggle mb-2" type="button" id="createdByDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Created By
+                                    </button>
+                                    <div class="dropdown-menu p-3" style="width: 250px">
+                                        <form id="createdByFilterForm" method="GET" action="{{ route('created_by_filter') }}">
+                                            @foreach($userSQL as $user)
+                                                <div class="form-check">
+                                                    <input type="checkbox" name="user_ids[]" value="{{ $user->user_id }}" class="form-check-input" id="user_{{ $user->user_id }}">
+                                                    <label class="form-check-label" for="user_{{ $user->user_id }}">
+                                                        {{ $user->first_name }} {{ $user->last_name }}
+                                                    </label>
+                                                </div>
+                                            @endforeach
+                                            <div class="text-center mt-2">
+                                                <button type="submit" class="btn btn-success btn-sm">Filter</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>  
+
+                                <!-- Product Name Dropdown -->
+                                <div class="btn-group">
+                                    <button class="btn btn-success dropdown-toggle mb-2" type="button" id="productNameDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Product Name
+                                    </button>
+                                    <ul class="dropdown-menu p-3" aria-labelledby="productNameDropdown" style="min-width: 250px;">
+                                        <form id="letterFilterForm" method="GET" action="{{ route('order_product_filter') }}">
+                                            <div class="row">
+                                                @foreach(range('A', 'Z') as $letter)
+                                                    <div class="col-4">
+                                                        <label class="dropdown-item">
+                                                            <input type="checkbox" name="letters[]" value="{{ $letter }}"> {{ $letter }}
+                                                        </label>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                            <div class="text-center mt-2">
+                                                <button type="submit" class="btn btn-success btn-sm">Filter</button>
+                                            </div>
+                                        </form>
+                                    </ul>
+                                </div>
                                 
+                                <!-- Supplier Dropdown -->
+                                <div class="btn-group">
+                                    <button class="btn btn-success dropdown-toggle mb-2" type="button" id="supplierDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Supplier
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="supplierDropdown">
+                                        <form id="filterForm" method="GET" action="{{ route('order_supplier_filter') }}">
+                                            @foreach($suppliers as $supplier)
+                                                <li>
+                                                    <label class="dropdown-item">
+                                                        <input type="checkbox" name="supplier_ids[]" value="{{ $supplier->supplier_id }}"> 
+                                                        {{ $supplier->company_name }}
+                                                    </label>
+                                                </li>
+                                            @endforeach
+                                            <li class="text-center mt-2">
+                                                <button type="submit" class="btn btn-success btn-sm">Filter</button>
+                                            </li>
+                                        </form>
+                                    </ul>
+                                </div>
+
+                                <!-- Payment Method Dropdown -->
+                                <div class="btn-group">
+                                    <button class="btn btn-success dropdown-toggle mb-2" type="button" id="paymentMethodDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Payment Method
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="paymentMethodDropdown">
+                                        <form id="filterForm" method="GET" action="{{ route('payment_method_filter') }}">
+                                            @foreach($paymentMethods as $payment)
+                                                <li>
+                                                    <label class="dropdown-item">
+                                                        <input type="checkbox" name="payment_methods[]" value="{{$payment}}"> 
+                                                        {{$payment}}
+                                                    </label>
+                                                </li>
+                                            @endforeach
+                                            <li class="text-center mt-2">
+                                                <button type="submit" class="btn btn-success btn-sm">Filter</button>
+                                            </li>
+                                        </form>
+                                    </ul>
+                                </div>
+
+                                <!-- Order Status Dropdown -->
+                                <div class="btn-group">
+                                    <button class="btn btn-success dropdown-toggle mb-2" type="button" id="orderStatusDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Order Status
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="orderStatusDropdown">
+                                        <form id="filterForm" method="GET" action="{{ route('order_status_filter') }}">
+                                            @foreach($orderStatuses as $status)
+                                                <li>
+                                                    <label class="dropdown-item">
+                                                        <input type="checkbox" name="order_status[]" value="{{$status->order_statuses}}"> 
+                                                        {{$status->status_name}}
+                                                    </label>
+                                                </li>
+                                            @endforeach
+                                            <li class="text-center mt-2">
+                                                <button type="submit" class="btn btn-success btn-sm">Filter</button>
+                                            </li>
+                                        </form>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
-                    </div> --}}
+                    </div>
 
                     <!-- Table -->
                     <table class="table table-responsive mt-4">
@@ -310,9 +282,7 @@
                                 <th>Created By</th>
                                 <th>Supplier</th>
                                 <th>Order Status</th>
-                                <th>Description</th>
-                                <th>Change Status</th>
-                                <th colspan="2">Action</th>
+                                <th colspan="4">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -321,7 +291,7 @@
                                     <td>{{ $order->purchase_order_id }}</td>
                                     <td>{{ $order->type }}</td>
                                     <td>{{ $order->payment_method }}</td>
-                                    <td>{{ $order->total_price }}</td>
+                                    <td>₱{{ number_format($order->total_price, 2) }}</td>
                                     <td>{{ $order->first_name }} {{ $order->last_name}}</td>
                                     <td>{{ $order->company_name }}</td>
                                     <td>{{ $order->status_name }}</td>
@@ -366,11 +336,17 @@
                                             @endforeach
 
                                             @if(!$allMatched) <!-- show button for unequallity -->
-                                                <button type="button" class="btn btn-light" onclick="showBackOrderInfo({{ $order->purchase_order_id }}, {{ $currentUser }})">
-                                                    <i class="fa fa-pen"></i>
-                                                    <strong>Create Backorder</strong>
-                                                </button>
-
+                                                @if (!$order->backorderExists)
+                                                    <button type="button" class="btn btn-light" onclick="showBackOrderInfo({{ $order->purchase_order_id }}, {{ $currentUser }})">
+                                                        <i class="fa fa-pen"></i>
+                                                        <strong>Create Backorder</strong>
+                                                    </button>
+                                                @else
+                                                    <button type="button" class="btn btn-light" disabled>
+                                                        <i class="fa fa-pen"></i>
+                                                        <strong>Backorder Created</strong>
+                                                    </button>
+                                                @endif
                                             @elseif($allMatched) <!-- show button for equallity -->
                                                 <button type="button" class="btn btn-light" onclick="" disabled>
                                                     <i class="fa fa-pen"></i>
@@ -443,81 +419,94 @@
                                     </div>
                                 </div>
 
-                                <!-- Delivered Report Modal for Each Order -->
-                                <div class="modal fade" id="deliveryReportModal{{ $order->purchase_order_id }}" tabindex="-1" role="dialog" aria-labelledby="deliveryReportModalLabel" aria-hidden="true" style="color: black;">
-                                    <div class="modal-dialog" role="document">
-                                        <div class="modal-content">
+                                <!-- Delivery Report Modal -->
+                                <div class="modal fade" id="deliveryReportModal{{ $order->purchase_order_id }}" tabindex="-1" role="dialog" aria-labelledby="deliveryReportModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg" role="document">
+                                        <div class="modal-content text-white" style="background-color: #565656; border-radius: 8px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);">
 
                                             <!-- Modal Header -->
-                                            <div class="modal-header">
-                                                <h5 class="modal-title" id="deliveryReportModalLabel">Delivery Report</h5>
-                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <div class="modal-header" style="background-color: #3a8f66;">
+                                                <h5 class="modal-title text-white">Delivery Report - Order #{{ $order->purchase_order_id }}</h5>
+                                                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                                                     <span aria-hidden="true">&times;</span>
                                                 </button>
                                             </div>
 
-                                            <!-- Delivery Report Modal for Each Order -->
+                                            <!-- Form -->
                                             <form id="deliveryReportForm{{ $order->purchase_order_id }}" action="{{ route('update_order_changes') }}" method="POST">
                                                 @csrf
                                                 <input type="hidden" name="purchase_order_id" value="{{ $order->purchase_order_id }}">
 
+                                                <!-- Modal Body -->
                                                 <div class="modal-body">
                                                     @foreach ($order->order_items as $item)
-                                                        <div class="row mb-3 border-bottom pb-2">
-                                                            <!-- Left: Product Info -->
-                                                            <div class="col-md-6">
-                                                                <h6 class="mb-1">{{ $item->product->product_name ?? 'Unknown Product' }}</h6>
-                                                                <p class="mb-0"><strong>Ordered Quantity:</strong> {{ $item->quantity }}</p>
+                                                        @php
+                                                            $pid = $item->product->product_id;
+                                                            $orderedQuantity = $item->quantity;
+                                                        @endphp
+                                                        <div class="border rounded p-3 mb-3" style="border-color: #444;">
+                                                            <div class="row">
+                                                                <!-- Product Info -->
+                                                                <div class="col-md-4">
+                                                                    <h5 class="mb-1 text-white">{{ $item->product->product_name ?? 'Unknown Product' }}</h5>
+                                                                    <p class="mb-1"><strong>Ordered:</strong> {{ $orderedQuantity }}</p>
+                                                                
+                                                                    <!-- Hidden input for ordered quantity -->
+                                                                    <input type="hidden" name="products[{{ $pid }}][ordered_quantity]" value="{{ $orderedQuantity }}">
+                                                                </div>                                                                
                                                             </div>
 
-                                                            <!-- Right: Input Field -->
-                                                            <div class="col-md-6">
-                                                                <div class="form-group mb-0">
-                                                                    <label for="delivered_quantity_{{ $item->product->product_id }}">
-                                                                        Delivered Quantity <i class="text-danger">*</i>
-                                                                    </label>
+                                                            <!-- Quantities Section -->
+                                                            <div class="row mt-3">
+                                                                <!-- Delivered Quantity -->
+                                                                <div class="col-md-3">
+                                                                    <label for="delivered_quantity_{{ $pid }}"><strong>Delivered Quantity</strong> <span class="text-danger">*</span></label>
                                                                     <input type="number"
-                                                                        class="form-control"
-                                                                        style="background-color: #fff; color: #000; border: 1px solid #ccc;"
-                                                                        name="products[{{ $item->product->product_id }}][delivered_quantity]"
-                                                                        id="delivered_quantity_{{ $item->product->product_id }}"
-                                                                        placeholder="Enter delivered quantity"
+                                                                        class="form-control delivered-quantity"
+                                                                        style="background-color: #212529; color: #fff; border: 1px solid #444;"
+                                                                        name="products[{{ $pid }}][delivered_quantity]"
+                                                                        id="delivered_quantity_{{ $pid }}"
                                                                         min="0"
-                                                                        required
-                                                                    >
+                                                                        placeholder="e.g. 10"
+                                                                        required>
                                                                 </div>
+
+                                                                <!-- Damaged Quantity -->
+                                                                <div class="col-md-3">
+                                                                    <label for="damaged_quantity_{{ $pid }}"><strong>Damaged Quantity</strong></label>
+                                                                    <input type="number"
+                                                                        class="form-control damaged-quantity"
+                                                                        style="background-color: #212529; color: #fff; border: 1px solid #444;"
+                                                                        name="products[{{ $pid }}][damaged_quantity]"
+                                                                        id="damaged_quantity_{{ $pid }}"
+                                                                        min="0"
+                                                                        placeholder="e.g. 2">
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- Remarks -->
+                                                            <div class="mt-3">
+                                                                <label for="remarks_{{ $pid }}"><strong>Remarks</strong></label>
+                                                                <textarea name="products[{{ $pid }}][remarks]"
+                                                                        id="remarks_{{ $pid }}"
+                                                                        class="form-control remarks"
+                                                                        rows="2"
+                                                                        style="background-color: #212529; color: #fff; border: 1px solid #444;"
+                                                                        placeholder="Any additional notes..."></textarea>
                                                             </div>
                                                         </div>
                                                     @endforeach
                                                 </div>
 
-                                                <!-- Error Message Block -->
-                                                @if ($errors->any() && old('product_id') == $order->purchase_order_id)
-                                                    <div class="alert alert-danger mx-3">
-                                                        <ul class="mb-0">
-                                                            @foreach ($errors->all() as $error)
-                                                                <li>{{ $error }}</li>
-                                                            @endforeach
-                                                        </ul>
-                                                    </div>
-                                                    {{-- Open the modal automatically if there are errors --}}
-                                                    <script>
-                                                        $(document).ready(function () {
-                                                            $('#deliveryReportModal{{ $order->purchase_order_id }}').modal('show');
-                                                        });
-                                                    </script>
-                                                @endif
-
                                                 <!-- Modal Footer -->
                                                 <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                                                    <button type="submit" class="btn btn-primary">Submit</button>
+                                                    <button type="button" class="btn btn-secondary" style="background-color: #3a8f66; border: none;" data-dismiss="modal">Close</button>
+                                                    <button type="submit" class="btn btn-primary" style="background-color: #3a8f66; border: none;">Submit Report</button>
                                                 </div>
                                             </form>
                                         </div>
                                     </div>
                                 </div>
-
                             @endforeach
                         </tbody>
                     </table>

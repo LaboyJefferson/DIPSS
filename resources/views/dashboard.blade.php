@@ -2,86 +2,86 @@
 <!-- Include the vertical navigation bar -->
 @include('common.navbar')
 
-<style>
-    body {
-        background-image: url('/storage/images/bg-photo.jpeg');
-        background-size: cover; /* Cover the entire viewport */
-        background-position: center; /* Center the background image */
-        background-repeat: no-repeat; /* Prevent the image from repeating */
-    }
-
-    /* Main content styling */
-    .content {
-        margin-right: 250px; /* Leave space for the sidebar on larger screens */
-        padding: 20px;
-        overflow: hidden; /* Prevent content overflow */
-        transition: margin-right 0.3s; /* Smooth transition when sidebar toggles */
-        position: relative; /* Ensure relative positioning for overlays */
-        z-index: 1; /* Ensure content is above background */
-    }
-
-    .main-content {
-        padding: 20px; /* Add padding for inner spacing */
-        margin: 0 20px; /* Add left and right margin */
-        color: #fff !important;
-        background-color: #565656 !important; 
-        border-radius: 5px; /* Slightly rounded corners */
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); 
-    }
-
-    @media (max-width: 768px) {
-        .content {
-            margin-right: 0; /* Remove margin on smaller screens */
+    <style>
+        body {
+            background-image: url('/storage/images/bg-photo.jpeg');
+            background-size: cover; /* Cover the entire viewport */
+            background-position: center; /* Center the background image */
+            background-repeat: no-repeat; /* Prevent the image from repeating */
         }
-    }
 
-    /* Styling for the notification bell and restock buttons */
-    .notification-bell {
-        display: flex;
-        justify-content: flex-end;
-        gap: 20px; /* Space between the buttons */
-    }
+        /* Main content styling */
+        .content {
+            margin-right: 250px; /* Leave space for the sidebar on larger screens */
+            padding: 20px;
+            overflow: hidden; /* Prevent content overflow */
+            transition: margin-right 0.3s; /* Smooth transition when sidebar toggles */
+            position: relative; /* Ensure relative positioning for overlays */
+            z-index: 1; /* Ensure content is above background */
+        }
 
-    /* Styling for each restock button */
-    .restock-button {
-        position: relative; /* This allows absolute positioning for the notification circle */
-        background-color: #3a8f66; /* Button background color */
-        color: white;
-        padding: 10px 20px;
-        font-size: 16px;
-        border-radius: 5px;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border: none;
-    }
+        .main-content {
+            padding: 20px; /* Add padding for inner spacing */
+            margin: 0 20px; /* Add left and right margin */
+            color: #fff !important;
+            background-color: #565656 !important; 
+            border-radius: 5px; /* Slightly rounded corners */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); 
+        }
 
-    .restock-button:hover {
-        background-color: #64edbd; /* Darker shade on hover */
-        color: #000;
-    }
+        @media (max-width: 768px) {
+            .content {
+                margin-right: 0; /* Remove margin on smaller screens */
+            }
+        }
 
-    /* Styling for the notification circle */
-    .notification-circle {
-        position: absolute;
-        top: -5px;
-        right: -10px;
-        background-color: #64edbd; /* Red background for the notification */
-        color: #000;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        text-align: center;
-        font-size: 12px;
-        line-height: 20px; /* Center the number inside the circle */
-    }
+        /* Styling for the notification bell and restock buttons */
+        .notification-bell {
+            display: flex;
+            justify-content: flex-end;
+            gap: 20px; /* Space between the buttons */
+        }
 
-</style>
+        /* Styling for each restock button */
+        .restock-button {
+            position: relative; /* This allows absolute positioning for the notification circle */
+            background-color: #3a8f66; /* Button background color */
+            color: white;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+        }
+
+        .restock-button:hover {
+            background-color: #64edbd; /* Darker shade on hover */
+            color: #000;
+        }
+
+        /* Styling for the notification circle */
+        .notification-circle {
+            position: absolute;
+            top: -5px;
+            right: -10px;
+            background-color: #64edbd; /* Red background for the notification */
+            color: #000;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            text-align: center;
+            font-size: 12px;
+            line-height: 20px; /* Center the number inside the circle */
+        }
+
+    </style>
 
 @section('content')
     <div class="content"> <!-- Add the content class to prevent overlap -->
-        @if(Auth::user()->role == "Inventory Manager" || Auth::user()->role == "Purchase Manager")
+        @if(Auth::user()->role == "Inventory Manager")
             <div class="container">
                 <!-- Alert Messages -->
                 @include('common.alert')
@@ -237,6 +237,112 @@
                     </div>
                 </div>
             </div>
+        @elseif(Auth::user()->role == "Purchase Manager")
+        <div class="container-fluid">
+            <div class="main-content">
+                <!-- Alert Messages -->
+                @include('common.alert')
+
+                <!-- KPI Cards Section -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <h5>Total Orders</h5>
+                                <p>{{ $totalOrders }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <h5>Delivered Orders</h5>
+                                <p>{{ $totalDelivered }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body">
+                                <h5>Pending Orders</h5>
+                                <p>{{ $totalPending }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-danger text-white">
+                            <div class="card-body">
+                                <h5>Damaged Quantity</h5>
+                                <p>{{ $totalDamaged }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Key Information for Product Reorder Management -->
+                <h3 class="h2 mb-3">Reorder Management Information</h3>
+                <div class="row mb-4">
+                    <!-- Total Products Needing Reorder -->
+                    <div class="col-md-4">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body">
+                                <h5>Products Needing Reorder</h5>
+                                <p>{{ $totalProductsNeedingReorder }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Total Suppliers with Products to Reorder -->
+                    <div class="col-md-4">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <h5>Suppliers with Products to Reorder</h5>
+                                <p>{{ $totalSuppliersWithReorder }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Total Reordered Products -->
+                    <div class="col-md-4">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <h5>Total Reordered Products</h5>
+                                <p>{{ $totalReorderedProducts }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Orders Section -->
+                <h3 class="h2 mb-3">Recent Orders</h3>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Status</th>
+                            <th>Total Quantity</th>
+                            <th>Delivered Quantity</th>
+                            <th>Date Ordered</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($recentOrders as $order)
+                            <tr>
+                                <td>{{ $order->purchase_order_id }}</td>
+                                <td>
+                                    @if($order->order_status == 3)
+                                        <span class="badge badge-success text-dark">Delivered</span>
+                                    @else
+                                        <span class="badge badge-warning text-dark">Pending</span>
+                                    @endif
+                                </td>
+                                <td>{{ $order->order_items->sum('quantity') }}</td>
+                                <td>{{ $order->order_items->sum('delivered_quantity') }}</td>
+                                <td>{{ \Carbon\Carbon::parse($order->created_at)->format('Y-m-d') }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
         @endif
     </div>
 
