@@ -275,52 +275,6 @@
 </nav>
 @endif
 
-<!-- Sidebar Navigation -->
-@if(Auth::user()->role == "Auditor")
-<nav id="sidebar" class="vh-100 navbar-expand-lg">
-    <button class="navbar-toggler toggle-btn" type="button" onclick="toggleSidebar()">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    
-    <div class="sidebar-header d-flex flex-row align-items-center py-3">
-        @if($userImage)
-            <img class="image rounded-circle" src="{{ asset('storage/userImage/' . $userImage) }}">
-        @else
-            <i class="fa-solid fa-circle-user fa-3x me-3"></i>
-        @endif
-
-        <div class="d-flex flex-column">
-            <h6>{{ $userRole }}</h6>
-            <h6>{{ $userName }}</h6>
-        </div>
-    </div>
-    <ul class="list-unstyled components">
-        <li class="{{ Request::routeIs('dashboard') ? 'active' : '' }}">
-            <a href="{{ route('dashboard') }}"><i class="fa-solid fa-user-shield"></i> DASHBOARD</a>
-        </li>
-        <li class="{{ Request::routeIs('show_profile') ? 'active' : '' }}">
-            <a href="{{ route('show_profile') }}"><i class="fa-solid fa-user-shield"></i> PROFILE</a>
-        </li>
-        <li class="{{ Request::routeIs('audit_inventory_table') ? 'active' : '' }}">
-            <a href="{{ route('audit_inventory_table') }}"><i class="fa-solid fa-warehouse"></i>INVENTORY</a>
-        </li>
-        <li class="{{ Request::routeIs('inventory.audit.logs') ? 'active' : '' }}">
-            <a href="{{ route('inventory.audit.logs') }}"><i class="fa-solid fa-file"></i> PRODUCT DISCREPANCIES</a>
-        </li>
-        {{-- <li class="{{ Request::routeIs('accounts_table') ? 'active' : '' }}">
-            <a href="{{ route('show_profile') }}"><i class="fa-solid fa-file"></i> REPORT</a>
-        </li> --}}
-        <li>
-            <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                <i class="fa-solid fa-sign-out-alt"></i> LOGOUT
-            </a>
-            <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
-                @csrf
-            </form>
-        </li>
-    </ul>
-</nav>
-@endif
 
 <!-- Sidebar Navigation -->
 @if(Auth::user()->role == "Salesperson")

@@ -137,6 +137,40 @@ class DashboardController extends Controller
         // Fetch all categories for filtering or display purposes
         $categories = Category::all();
 
+        if (auth()->user()->role === "Salesperson") {
+           // Sales Statistics
+            $stats = [
+                'today_sales' => DB::table('sales')
+                    ->whereDate('sales_date', today())
+                    ->sum('total_amount'),
+                
+                'total_revenue' => DB::table('sales')
+                    ->sum('total_amount'),
+                
+                'avg_order_value' => DB::table('sales')
+                    ->avg('total_amount'),
+                
+                'items_sold' => DB::table('sales_details')
+                    ->sum('sales_quantity'),
+                
+                'recent_sales' => DB::table('sales')
+                    ->join('user', 'sales.user_id', '=', 'user.user_id')
+                    ->select('sales.*', 'user.first_name', 'user.last_name')
+                    ->orderBy('sales_date', 'desc')
+                    ->limit(10)
+                    ->get(),
+                
+                'monthly_sales' => DB::table('sales')
+                    ->select(DB::raw('MONTH(sales_date) as month'), 
+                            DB::raw('SUM(total_amount) as total'))
+                    ->groupBy(DB::raw('MONTH(sales_date)'))
+                    ->orderBy(DB::raw('MONTH(sales_date)'))
+                    ->get()
+            ];
+
+            return view('sales.dashboard', compact('stats'));
+        }
+
         return view('dashboard', [
             'userSQL' => $userSQL,
             'inventoryJoined' => $inventoryJoined,

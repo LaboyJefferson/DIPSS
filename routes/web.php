@@ -44,9 +44,7 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index']);
 use App\Http\Controllers\DashboardController;
 Route::middleware(['auth', 'check.default_password'])->group(function () {
     Route::resource('dashboard', DashboardController::class);
-    Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/get-chart-data', [DashboardController::class, 'getChartData']);
-
+    Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
 });
 
 
@@ -159,7 +157,7 @@ Route::get('order_status_filter', [PurchaseController::class, 'orderStatusFilter
 
 use App\Http\Controllers\SalesController;
 Route::resource('sales', SalesController::class);
-Route::get('dashboard', [SalesController::class, 'dashboard'])->name('sales.dashboard');
+Route::get('sales.dashboard', [SalesController::class, 'dashboard'])->name('sales.dashboard');
 Route::post('sales', [SalesController::class, 'store'])->name('sales.store');
 Route::get('sales_table', [SalesController::class, 'index'])->name('sales_table');
 Route::get('create', [SalesController::class, 'create'])->name('sale_product');
