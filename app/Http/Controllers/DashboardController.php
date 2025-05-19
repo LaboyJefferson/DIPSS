@@ -299,7 +299,8 @@ class DashboardController extends Controller
             DB::raw('MAX(to_stockroom_id) as latest_stockroom_id')
         )
         ->groupBy('product_id');
-     // Fetch inventory and related details
+
+        // Fetch inventory and related details
         $productJoined = DB::table('inventory')
             ->join('product', 'inventory.product_id', '=', 'product.product_id')
             ->leftJoinSub($aggregatedStockTransfer, 'stock_transfer', function ($join) {
@@ -356,7 +357,7 @@ class DashboardController extends Controller
                     ->orderBy(DB::raw('MONTH(sales_date)'))
                     ->get()
             ];
-
+            // dd($stats);
             return view('sales.dashboard', compact('stats'));
         }elseif(auth()->user()->role === "Salesperson") {
             // Check if the user is logged in

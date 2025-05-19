@@ -109,8 +109,8 @@
                                     <td>{{ $sale->first_name }} {{ $sale->last_name }}</td>
                                     <td>${{ number_format($sale->total_amount, 2) }}</td>
                                     <td>
-                                        <span class="badge bg-{{ $sale->payment_method === 'cash' ? 'success' : 'primary' }}">
-                                            {{ strtoupper($sale->payment_method) }}
+                                        <span class="badge bg-{{  empty($sale->payment_method) || $sale->payment_method === 'cash' ? 'success' : 'primary' }}">
+                                            {{ strtoupper($sale->payment_method  ?? 'cash') }}
                                         </span>
                                     </td>
                                     <td><span class="badge bg-success">Completed</span></td>

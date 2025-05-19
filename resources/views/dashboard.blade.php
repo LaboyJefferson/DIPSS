@@ -238,111 +238,111 @@
                 </div>
             </div>
         @elseif(Auth::user()->role == "Purchase Manager")
-        <div class="container-fluid">
-            <div class="main-content">
-                <!-- Alert Messages -->
-                @include('common.alert')
+            <div class="container-fluid">
+                <div class="main-content">
+                    <!-- Alert Messages -->
+                    @include('common.alert')
 
-                <!-- KPI Cards Section -->
-                <div class="row mb-4">
-                    <div class="col-md-3">
-                        <div class="card bg-primary text-white">
-                            <div class="card-body">
-                                <h5>Total Orders</h5>
-                                <p>{{ $totalOrders }}</p>
+                    <!-- KPI Cards Section -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <h5>Total Orders</h5>
+                                    <p>{{ $totalOrders }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h5>Delivered Orders</h5>
+                                    <p>{{ $totalDelivered }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body">
+                                    <h5>Pending Orders</h5>
+                                    <p>{{ $totalPending }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body">
+                                    <h5>Damaged Quantity</h5>
+                                    <p>{{ $totalDamaged }}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card bg-success text-white">
-                            <div class="card-body">
-                                <h5>Delivered Orders</h5>
-                                <p>{{ $totalDelivered }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card bg-warning text-white">
-                            <div class="card-body">
-                                <h5>Pending Orders</h5>
-                                <p>{{ $totalPending }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card bg-danger text-white">
-                            <div class="card-body">
-                                <h5>Damaged Quantity</h5>
-                                <p>{{ $totalDamaged }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Key Information for Product Reorder Management -->
-                <h3 class="h2 mb-3">Reorder Management Information</h3>
-                <div class="row mb-4">
-                    <!-- Total Products Needing Reorder -->
-                    <div class="col-md-4">
-                        <div class="card bg-warning text-white">
-                            <div class="card-body">
-                                <h5>Products Needing Reorder</h5>
-                                <p>{{ $totalProductsNeedingReorder }}</p>
+                    <!-- Key Information for Product Reorder Management -->
+                    <h3 class="h2 mb-3">Reorder Management Information</h3>
+                    <div class="row mb-4">
+                        <!-- Total Products Needing Reorder -->
+                        <div class="col-md-4">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body">
+                                    <h5>Products Needing Reorder</h5>
+                                    <p>{{ $totalProductsNeedingReorder }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Total Suppliers with Products to Reorder -->
+                        <div class="col-md-4">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <h5>Suppliers with Products to Reorder</h5>
+                                    <p>{{ $totalSuppliersWithReorder }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Total Reordered Products -->
+                        <div class="col-md-4">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h5>Total Reordered Products</h5>
+                                    <p>{{ $totalReorderedProducts }}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <!-- Total Suppliers with Products to Reorder -->
-                    <div class="col-md-4">
-                        <div class="card bg-info text-white">
-                            <div class="card-body">
-                                <h5>Suppliers with Products to Reorder</h5>
-                                <p>{{ $totalSuppliersWithReorder }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Total Reordered Products -->
-                    <div class="col-md-4">
-                        <div class="card bg-success text-white">
-                            <div class="card-body">
-                                <h5>Total Reordered Products</h5>
-                                <p>{{ $totalReorderedProducts }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Recent Orders Section -->
-                <h3 class="h2 mb-3">Recent Orders</h3>
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Order ID</th>
-                            <th>Status</th>
-                            <th>Total Quantity</th>
-                            <th>Delivered Quantity</th>
-                            <th>Date Ordered</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($recentOrders as $order)
+                    <!-- Recent Orders Section -->
+                    <h3 class="h2 mb-3">Recent Orders</h3>
+                    <table class="table table-striped">
+                        <thead>
                             <tr>
-                                <td>{{ $order->purchase_order_id }}</td>
-                                <td>
-                                    @if($order->order_status == 3)
-                                        <span class="badge badge-success text-dark">Delivered</span>
-                                    @else
-                                        <span class="badge badge-warning text-dark">Pending</span>
-                                    @endif
-                                </td>
-                                <td>{{ $order->order_items->sum('quantity') }}</td>
-                                <td>{{ $order->order_items->sum('delivered_quantity') }}</td>
-                                <td>{{ \Carbon\Carbon::parse($order->created_at)->format('Y-m-d') }}</td>
+                                <th>Order ID</th>
+                                <th>Status</th>
+                                <th>Total Quantity</th>
+                                <th>Delivered Quantity</th>
+                                <th>Date Ordered</th>
                             </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach($recentOrders as $order)
+                                <tr>
+                                    <td>{{ $order->purchase_order_id }}</td>
+                                    <td>
+                                        @if($order->order_status == 3)
+                                            <span class="badge badge-success text-dark">Delivered</span>
+                                        @else
+                                            <span class="badge badge-warning text-dark">Pending</span>
+                                        @endif
+                                    </td>
+                                    <td>{{ $order->order_items->sum('quantity') }}</td>
+                                    <td>{{ $order->order_items->sum('delivered_quantity') }}</td>
+                                    <td>{{ \Carbon\Carbon::parse($order->created_at)->format('Y-m-d') }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
         @endif
     </div>
 

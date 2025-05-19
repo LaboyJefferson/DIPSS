@@ -3,15 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
-<<<<<<< HEAD
-<<<<<<< HEAD
 -- Generation Time: May 19, 2025 at 03:24 AM
-=======
--- Generation Time: May 18, 2025 at 05:55 PM
->>>>>>> dfd52ded42d9940d944f9a4302f5087fd7660ef3
-=======
--- Generation Time: May 18, 2025 at 05:55 PM
->>>>>>> dfd52de (purchasing - v1)
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -110,25 +102,16 @@ CREATE TABLE `inventory` (
   `in_stock` int(6) DEFAULT NULL,
   `reorder_level` int(6) NOT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
-<<<<<<< HEAD
-<<<<<<< HEAD
   `updated_at` timestamp NULL DEFAULT NULL,
   `profit_margin` decimal(5,2) DEFAULT NULL,
   `tax_rate` decimal(5,2) DEFAULT NULL,
   `tax_amount` decimal(10,2) GENERATED ALWAYS AS (`sale_price_per_unit` * `tax_rate`) STORED
-=======
-  `updated_at` timestamp NULL DEFAULT NULL
->>>>>>> dfd52ded42d9940d944f9a4302f5087fd7660ef3
-=======
-  `updated_at` timestamp NULL DEFAULT NULL
->>>>>>> dfd52de (purchasing - v1)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `inventory`
 --
 
-<<<<<<< HEAD
 INSERT INTO `inventory` (`inventory_id`, `product_id`, `purchase_price_per_unit`, `sale_price_per_unit`, `unit_of_measure`, `in_stock`, `reorder_level`, `created_at`, `updated_at`, `profit_margin`, `tax_rate`) VALUES
 (17191477, 46004118, 24.00, 32.00, 'pcs', 19, 10, '2024-12-03 03:02:35', '2024-12-08 07:22:09', NULL, NULL),
 (19144846, 72142592, 1500.00, NULL, NULL, 0, 5, '2025-05-18 15:52:39', '2025-05-18 15:52:39', NULL, NULL),
@@ -151,33 +134,6 @@ INSERT INTO `inventory` (`inventory_id`, `product_id`, `purchase_price_per_unit`
 (85845553, 84495846, 6400.00, 7635.00, 'pcs', 22, 5, '2024-12-06 01:36:05', '2024-12-08 07:22:09', NULL, NULL),
 (95154263, 65174824, 24.00, 32.00, 'pcs', 24, 1, '2024-12-02 14:20:39', '2024-12-08 07:22:09', NULL, NULL),
 (95974033, 15076522, 15000.00, 18000.00, 'pcs', 25, 8, '2024-12-06 00:19:22', '2025-05-18 15:13:05', NULL, NULL);
-=======
-INSERT INTO `inventory` (`inventory_id`, `product_id`, `purchase_price_per_unit`, `sale_price_per_unit`, `unit_of_measure`, `in_stock`, `reorder_level`, `created_at`, `updated_at`) VALUES
-(17191477, 46004118, 24.00, 32.00, 'pcs', 19, 10, '2024-12-03 03:02:35', '2024-12-08 07:22:09'),
-(19144846, 72142592, 1500.00, NULL, NULL, 0, 5, '2025-05-18 15:52:39', '2025-05-18 15:52:39'),
-(19826892, 40739618, 55000.00, 62000.00, 'pcs', 17, 2, '2024-12-02 02:36:49', '2024-12-08 07:22:09'),
-(19877235, 91761968, 1300.00, NULL, NULL, 0, 5, '2025-05-17 14:34:57', '2025-05-17 14:34:57'),
-(22882096, 84136811, 750.00, NULL, NULL, 0, 5, '2025-05-17 14:35:23', '2025-05-17 14:35:23'),
-(27694810, 10332285, 125.00, NULL, NULL, 0, 10, '2025-05-18 06:01:29', '2025-05-18 06:01:29'),
-(30678416, 73086209, 15000.00, 18000.00, 'box', 18, 1, '2024-12-16 01:21:58', '2025-05-16 16:12:59'),
-(46813078, 30607915, 1200.00, NULL, NULL, 0, 5, '2025-05-18 15:51:54', '2025-05-18 15:51:54'),
-(51675109, 98593146, 299.00, NULL, NULL, 0, 5, '2025-05-18 15:51:26', '2025-05-18 15:51:26'),
-(57241216, 62516636, 220.00, NULL, NULL, 20, 5, '2025-05-18 11:40:21', '2025-05-18 14:22:33'),
-(59712524, 31299885, 24.00, 32.00, 'pcs', 14, 1, '2024-12-02 11:43:27', '2024-12-08 07:22:09'),
-(63316492, 95333368, 1230.00, NULL, NULL, 13, 3, '2025-05-18 11:35:49', '2025-05-18 14:22:34'),
-(64397053, 78592703, 2500.00, NULL, NULL, 0, 5, '2025-05-17 14:34:32', '2025-05-17 14:34:32'),
-(64810391, 60059611, 1300.00, NULL, NULL, 0, 3, '2025-05-17 14:39:16', '2025-05-17 14:39:16'),
-(64910596, 92293430, 1250.00, NULL, NULL, 0, 3, '2025-05-17 14:43:59', '2025-05-17 14:43:59'),
-(64921281, 86556148, 2500.00, NULL, NULL, 0, 3, '2025-05-18 11:32:14', '2025-05-18 11:32:14'),
-(66435197, 29700389, 250.00, NULL, NULL, 10, 5, '2025-05-18 11:37:12', '2025-05-18 14:22:33'),
-(82984096, 18975177, 5000.00, 1100.00, 'pair', 14, 5, '2024-12-06 01:27:02', '2025-05-16 16:12:59'),
-(85845553, 84495846, 6400.00, 7635.00, 'pcs', 22, 5, '2024-12-06 01:36:05', '2024-12-08 07:22:09'),
-(95154263, 65174824, 24.00, 32.00, 'pcs', 24, 1, '2024-12-02 14:20:39', '2024-12-08 07:22:09'),
-(95974033, 15076522, 15000.00, 18000.00, 'pcs', 25, 8, '2024-12-06 00:19:22', '2025-05-18 15:13:05');
-<<<<<<< HEAD
->>>>>>> dfd52ded42d9940d944f9a4302f5087fd7660ef3
-=======
->>>>>>> dfd52de (purchasing - v1)
 
 -- --------------------------------------------------------
 
@@ -458,27 +414,18 @@ CREATE TABLE `sales` (
   `sales_id` int(8) NOT NULL,
   `user_id` int(8) NOT NULL,
   `total_amount` decimal(10,2) NOT NULL,
-<<<<<<< HEAD
-<<<<<<< HEAD
   `sales_date` timestamp NULL DEFAULT NULL,
   `items` text DEFAULT NULL,
   `subtotal` decimal(10,2) DEFAULT NULL,
   `discount` decimal(10,2) DEFAULT NULL,
   `tax` decimal(10,2) DEFAULT NULL,
   `payment_method` varchar(50) DEFAULT NULL
-=======
-  `sales_date` timestamp NULL DEFAULT NULL
->>>>>>> dfd52ded42d9940d944f9a4302f5087fd7660ef3
-=======
-  `sales_date` timestamp NULL DEFAULT NULL
->>>>>>> dfd52de (purchasing - v1)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `sales`
 --
 
-<<<<<<< HEAD
 INSERT INTO `sales` (`sales_id`, `user_id`, `total_amount`, `sales_date`, `items`, `subtotal`, `discount`, `tax`, `payment_method`) VALUES
 (22725940, 20240000, 37.00, '2024-12-02 03:29:31', NULL, NULL, NULL, NULL, NULL),
 (23249319, 20240000, 62096.00, '2024-12-10 13:39:09', NULL, NULL, NULL, NULL, NULL),
@@ -493,25 +440,6 @@ INSERT INTO `sales` (`sales_id`, `user_id`, `total_amount`, `sales_date`, `items
 (75275548, 20240000, 185.00, '2024-12-02 08:50:15', NULL, NULL, NULL, NULL, NULL),
 (85216851, 20240000, 160.00, '2024-12-10 12:50:41', NULL, NULL, NULL, NULL, NULL),
 (94080478, 20240000, 133.00, '2024-12-02 14:37:04', NULL, NULL, NULL, NULL, NULL);
-=======
-INSERT INTO `sales` (`sales_id`, `user_id`, `total_amount`, `sales_date`) VALUES
-(22725940, 20240000, 37.00, '2024-12-02 03:29:31'),
-(23249319, 20240000, 62096.00, '2024-12-10 13:39:09'),
-(24995497, 20240000, 185.00, '2024-12-02 06:15:28'),
-(27709313, 20240000, 4526000.00, '2024-12-02 14:54:39'),
-(32333087, 20240002, 400.00, '2024-12-10 14:32:07'),
-(41031817, 20240000, 37.00, '2024-12-02 03:39:02'),
-(54819379, 20240000, 62037.00, '2024-12-02 03:29:57'),
-(55617457, 20240003, 91100.00, '2024-12-16 01:25:20'),
-(61052879, 20240000, 62111.00, '2024-12-02 06:26:36'),
-(70205673, 20240000, 310000.00, '2024-12-02 04:21:08'),
-(75275548, 20240000, 185.00, '2024-12-02 08:50:15'),
-(85216851, 20240000, 160.00, '2024-12-10 12:50:41'),
-(94080478, 20240000, 133.00, '2024-12-02 14:37:04');
-<<<<<<< HEAD
->>>>>>> dfd52ded42d9940d944f9a4302f5087fd7660ef3
-=======
->>>>>>> dfd52de (purchasing - v1)
 
 -- --------------------------------------------------------
 
