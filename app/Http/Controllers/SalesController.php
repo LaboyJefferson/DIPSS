@@ -67,6 +67,74 @@ class SalesController extends Controller
         ]);
     }
 
+    public function showReceipt($id)
+    {
+        $saleGroup = DB::table('sales')
+            ->join('sales_details', 'sales.sales_id', '=', 'sales_details.sales_id')
+            ->join('inventory', 'sales_details.inventory_id', '=', 'inventory.inventory_id')
+            ->join('product', 'sales_details.product_id', '=', 'product.product_id')
+            ->where('sales.sales_id', $id)
+            ->select(
+                'sales.*',
+                'sales_details.*',
+                'product.product_name',
+                'inventory.*', // Added this line
+            )
+            ->get();
+
+        if ($saleGroup->isEmpty()) {
+            abort(404);
+        }
+
+        $mainSale = DB::table('sales')
+            ->where('sales_id', $id)
+            ->select(
+                '*',
+                DB::raw('(SELECT SUM(sales_quantity) FROM sales_details WHERE sales_id = '.$id.') as items')
+            )
+            ->first();
+
+        return view('sales.receipt', [
+            'sales' => $saleGroup,
+            'mainSale' => $mainSale
+        ]);
+    }
+
+    public function dashboard()
+    {
+        // Sales Statistics
+        $stats = [
+            'today_sales' => DB::table('sales')
+                ->whereDate('sales_date', today())
+                ->sum('total_amount'),
+            
+            'total_revenue' => DB::table('sales')
+                ->sum('total_amount'),
+            
+            'avg_order_value' => DB::table('sales')
+                ->avg('total_amount'),
+            
+            'items_sold' => DB::table('sales_details')
+                ->sum('sales_quantity'),
+            
+            'recent_sales' => DB::table('sales')
+                ->join('user', 'sales.user_id', '=', 'user.user_id')
+                ->select('sales.*', 'user.first_name', 'user.last_name')
+                ->orderBy('sales_date', 'desc')
+                ->limit(10)
+                ->get(),
+            
+            'monthly_sales' => DB::table('sales')
+                ->select(DB::raw('MONTH(sales_date) as month'), 
+                        DB::raw('SUM(total_amount) as total'))
+                ->groupBy(DB::raw('MONTH(sales_date)'))
+                ->orderBy(DB::raw('MONTH(sales_date)'))
+                ->get()
+        ];
+
+        return view('sales.dashboard', compact('stats'));
+    }
+
     private function generateId($table)
     {
         // Generate a random 8-digit number
@@ -93,33 +161,54 @@ class SalesController extends Controller
         return view('sales.create_sales', ['productJoined' => $productJoined]);
     }
 
+
+
     public function fetchProduct(Request $request)
     {
-        $product_id = $request->input('product_id');
-        $product = DB::table('inventory')
+        $search = $request->input('search');
+        
+        $products = DB::table('inventory')
             ->join('product', 'inventory.product_id', '=', 'product.product_id')
-            ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
-            ->join('stockroom', 'stock_transfer.to_stockroom_id', '=', 'stockroom.stockroom_id')
-            ->join('category', 'product.category_id', '=', 'category.category_id')
-            ->select('inventory.*', 'product.*', 'category.category_name', 'stockroom.*', 'stock_transfer.*')
-            ->where('product.product_id', $product_id)
-            ->first();
+            ->select(
+                'product.product_id as id', // Alias to match frontend expectation
+                'product.product_name as name',
+                'inventory.inventory_id as hidden_id',
+                'inventory.sale_price_per_unit as price',
+                'inventory.unit_of_measure as unit',
+                'inventory.tax_rate',       // Changed from tax_amount to tax_rate
+                'inventory.in_stock',
+                'product.description'
+            )
+            ->where(function($query) use ($search) {
+                $query->where('product.product_id', 'like', "%$search%")
+                    ->orWhere('product.product_name', 'like', "%$search%");
+            })
+            ->distinct() // Prevent duplicate entries
+            ->get();
 
-        if ($product) {
-            // Decode the description JSON if available
-            $product->descriptionArray = json_decode($product->description, true);
-            $seller = Auth::user()->first_name . ' ' . Auth::user()->last_name; // Logged-in seller's full name
+        if ($products->isNotEmpty()) {
             return response()->json([
                 'success' => true,
-                'product' => $product,
-                'seller' => $seller
+                'products' => $products->map(function ($product) {
+                    return [
+                        'id' => $product->id,
+                        'hidden_id' => $product->hidden_id,
+                        'name' => $product->name,
+                        'price' => (float)$product->price,
+                        'tax_rate' => (float)$product->tax_rate,
+                        'unit' => $product->unit,
+                        'stock' => $product->in_stock,
+                        'description' => json_decode($product->description, true)
+                    ];
+                })
             ]);
-        } else {
-            return response()->json(['success' => false, 'message' => 'Product not found.']);
         }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'No matching products found'
+        ]);
     }
-
-
     /**
      * Store a newly created resource in storage.
      *
@@ -128,99 +217,76 @@ class SalesController extends Controller
      */
     public function store(Request $request)
     {
-        // Validate the array input for multiple products
-        $validatedData = $request->validate([
-            'product_id' => 'required|array',
-            'product_id.*' => 'required|integer|exists:product,product_id',
-            'quantity' => 'required|array',
-            'quantity.*' => 'required|integer|min:1',
-            'total_amount' => 'required|array',
-            'total_amount.*' => 'required|numeric',
-            'grand_total_amount' => 'required|numeric',
-        ]);
-
-        // Get the user ID (assuming the user is logged in)
-        $userId = Auth::id();
-
-        // Start a transaction to ensure consistency between sales and inventory updates
-        DB::transaction(function () use ($userId, $validatedData) {
-            // Insert a single sale record with current timestamp
-            $salesId = $this->generateId('sales');
-            DB::table('sales')->insert([
-                'sales_id' => $salesId,
-                'user_id' => $userId,
-                'total_amount' => $validatedData['grand_total_amount'],
-                'sales_date' => now(),
+        try {
+            $validatedData = $request->validate([
+                'items' => 'required|array',
+                'items.*' => 'sometimes|required|array',
+                'items.*.product_id' => 'required|integer|exists:product,product_id',
+                'items.*.inventory_id' => 'required|integer|exists:inventory,inventory_id',
+                'items.*.quantity' => 'required|integer|min:1',
+                'items.*.price' => 'required|numeric',
+                'subtotal_amnt' => 'required|numeric',
+                'discount_amnt' => 'required|numeric',
+                'tax_amnt' => 'required|numeric',
+                'total_amnt' => 'required|numeric',
+                'payment_method' => 'required|string|in:cash,gcash',
+                'payment_amount' => 'required|numeric|min:0'
             ]);
 
-            $salesDetails = [];
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // This will show validation errors
+            return response()->json([
+                'status' => 'error',
+                'errors' => $e->errors()
+            ], 422);
+        }
 
-            foreach ($validatedData['product_id'] as $index => $productId) {
-                $quantity = $validatedData['quantity'][$index];
-                $amount = $validatedData['total_amount'][$index];
+        $userId = Auth::id();
+        try {
+            DB::transaction(function () use ($userId, $validatedData) {
+                $salesId = $this->generateId('sales');
+                $totalItems = array_sum(array_column($validatedData['items'], 'quantity'));
 
-                // Retrieve inventory data for the product
-                $inventory = DB::table('inventory')
-                    ->join('product', 'inventory.product_id', '=', 'product.product_id')
-                    ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
-                    ->join('stockroom', 'stock_transfer.to_stockroom_id', '=', 'stockroom.stockroom_id')
-                    ->select('inventory.*', 'product.*', 'stockroom.*', 'stock_transfer.*')
-                    ->where('inventory.product_id', $productId)
-                    ->first();
-
-                if (!$inventory || $inventory->in_stock < $quantity) {
-                    throw new \Exception("Not enough stock available for product ID: {$productId}");
-                }
-
-                $storeStock = $inventory->in_stock - $inventory->product_quantity;
-
-                // Check if additional stock transfer is needed
-                if ($storeStock < $quantity) {
-                    $transferQuantity = $quantity - abs($storeStock); //abs() will make negative number absolute
-
-                    // Insert into stock_transfer
-                    DB::table('stock_transfer')->insert([
-                        'stock_transfer_id' => $this->generateId('stock_transfer'),
-                        'transfer_quantity' => $transferQuantity,
-                        'transfer_date' => now(),
-                        'product_id' => $productId,
-                        'user_id' => $userId,
-                        'from_stockroom_id' => $inventory->stockroom_id,
-                    ]);
-
-                    // Update stockroom product quantity
-                    DB::table('stockroom')
-                        ->where('stockroom_id', $inventory->stockroom_id)
-                        ->decrement('product_quantity', $transferQuantity);
-
-                    // Adjust store stock back to zero after transfer
-                    $storeStock = 0;
-                }
-
-                // Generate a unique sales_details_id for this product
-                $salesDetailsId = $this->generateId('sales_details');
-
-                // Prepare data for sales_details
-                $salesDetails[] = [
-                    'sales_details_id' => $salesDetailsId,
+                // Insert into sales table
+                DB::table('sales')->insert([
                     'sales_id' => $salesId,
-                    'product_id' => $productId,
-                    'inventory_id' => $inventory->inventory_id,
-                    'sales_quantity' => $quantity,
-                    'amount' => $amount,
-                ];
+                    'user_id' => $userId,
+                    'items' => $totalItems,
+                    'subtotal' => $validatedData['subtotal_amnt'],
+                    'discount' => $validatedData['discount_amnt'],
+                    'tax' => $validatedData['tax_amnt'],
+                    'total_amount' => $validatedData['total_amnt'],
+                    'payment_method' => $validatedData['payment_method'],
+                    'sales_date' => now(),
+                ]);
 
-                // Update inventory for each product
-                DB::table('inventory')
-                    ->where('product_id', $productId)
-                    ->decrement('in_stock', $quantity);
-            }
+                // Process sales details
+                $salesDetails = [];
+                foreach ($validatedData['items'] as $item) {
+                    $inventory = DB::table('inventory')
+                        ->where('inventory_id', $item['inventory_id'])
+                        ->first();
 
-            // Bulk insert into sales_details
-            DB::table('sales_details')->insert($salesDetails);
-        });
+                    $salesDetails[] = [
+                        'sales_details_id' => $this->generateId('sales_details'),
+                        'sales_id' => $salesId,
+                        'inventory_id' => $item['inventory_id'],
+                        'product_id' => $item['product_id'],
+                        'sales_quantity' => $item['quantity'],
+                        'amount' => $item['price'],
+                    ];
 
-        return redirect()->route('sales_table')->with('success', 'Sale completed successfully');
+                    DB::table('inventory')
+                        ->where('inventory_id', $item['inventory_id'])
+                        ->decrement('in_stock', $item['quantity']);
+                }
+
+                DB::table('sales_details')->insert($salesDetails);
+            });
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors($e->getMessage());
+        }
+        return redirect()->route('sales_table')->with('success', 'Sale processed successfully.');
     }
 
 
@@ -286,19 +352,13 @@ class SalesController extends Controller
 
         $productJoined = DB::table('inventory')
             ->join('product', 'inventory.product_id', '=', 'product.product_id')
-            ->join('stock_transfer', 'stock_transfer.product_id', '=', 'product.product_id')
-            ->join('stockroom', 'stock_transfer.to_stockroom_id', '=', 'stockroom.stockroom_id')
-            ->join('category', 'product.category_id', '=', 'category.category_id')
-            ->leftJoin('product_supplier', 'product.product_id', '=', 'product_supplier.product_id')
-            ->leftJoin('supplier', 'product_supplier.supplier_id', '=', 'supplier.supplier_id')
-            ->select('inventory.*', 'product.*', 'category.*', 'supplier.*', 'stock_transfer.*', 'stockroom.*')
-            // Prioritize products that need restocking (either store or stockroom)
-            ->orderByRaw('
-            CASE 
-                WHEN inventory.in_stock - stockroom.product_quantity <= inventory.reorder_level THEN 1 
-                WHEN stockroom.product_quantity <= inventory.reorder_level THEN 2 
-                ELSE 3 
-            END, updated_at DESC')
+            ->select(
+                'inventory.*', 
+                'product.*',
+                'inventory.purchase_price_per_unit as purchase_price',
+                'inventory.profit_margin',
+                'inventory.tax_rate'
+            )
             ->get();
 
         // Filter duplicates based on a unique key (e.g., product_id)
@@ -420,22 +480,30 @@ class SalesController extends Controller
 
 
     public function productSalePrice(Request $request)
-{
-    $validated = $request->validate([
-        'productID' => ['required', 'exists:product,product_id'],
-        'productPrice' => ['required', 'numeric', 'min:1'],
-    ]);
-        // Update Inventory
-        $inventory = Inventory::where('product_id', $validated['productID'])->first();
+    {
+        $validated = $request->validate([
+            'productID' => ['required', 'exists:product,product_id'],
+            'profit_margin' => ['required', 'numeric', 'min:0', 'max:100'],
+            'tax_rate' => ['required', 'numeric', 'min:0', 'max:100'],
+        ]);
 
-        // Update inventory details
+        $inventory = Inventory::where('product_id', $validated['productID'])->first();
+        
+        // Calculate selling price
+        $purchase_price = $inventory->purchase_price_per_unit;
+        $profit = $validated['profit_margin']/100;
+        $tax = $validated['tax_rate']/100;
+        $selling_price = $purchase_price * (1+$profit) * (1+$tax);
+
         $inventory->update([
-            'sale_price_per_unit' => $validated['productPrice'],
+            'sale_price_per_unit' => $selling_price,
+            'profit_margin' => $profit,
+            'tax_rate' => $tax,
             'updated_at' => now(),
         ]);
 
-    return redirect()->back()->with('success', 'Product prices updated successfully.');
-}
+        return redirect()->back()->with('success', 'Product prices updated successfully.');
+    }
 
 
 

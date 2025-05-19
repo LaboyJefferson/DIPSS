@@ -167,9 +167,7 @@
                     <thead>
                         <tr>
                             <th>Ref. No.</th>
-                            <th>Seller</th>
                             <th>Product Name</th>
-                            <th>Category</th>
                             <th>Quantity</th>
                             <th>Sale Price</th>
                             <th>Amount</th>
@@ -177,6 +175,7 @@
                             <th>Sales Timestamp</th>
                             <th>Description</th>
                             <th>Action</th>
+                            <th>Receipt</th>
                         </tr>
                     </thead>
                     <tbody id="selectedSaleDetails">
@@ -189,9 +188,7 @@
                     <thead>
                         <tr>
                             <th>Ref. No.</th>
-                            <th>Seller</th>
                             <th>Product Name</th>
-                            <th>Category</th>
                             <th>Quantity</th>
                             <th>Sale Price</th>
                             <th>Amount</th>
@@ -199,6 +196,7 @@
                             <th>Transaction Date</th>
                             <th>Description</th>
                             <th>Action</th>
+                            <th>Receipt</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -211,9 +209,7 @@
                                 <tr>
                                     @if($index === 0) <!-- Display this only for the first product -->
                                         <td rowspan="{{ count($sales) }}">{{ $data->sales_id }}</td> <!-- Merge cells for sales_id -->
-                                        <td rowspan="{{ count($sales) }}">{{ $data->first_name }} {{ $data->last_name }}</td> <!-- Merge cells for seller -->
                                         <td>{{ $data->product_name }}</td>
-                                        <td>{{ $data->category_name }}</td>
                                         <td>{{ $data->sales_quantity }}</td>
                                         <td>{{ number_format($data->sale_price_per_unit, 2) }}</td>
                                         <td>{{ number_format($data->amount, 2) }}</td>
@@ -235,9 +231,15 @@
                                                 </button>
                                             @endif
                                         </td>
+                                        <td rowspan="{{ count($sales) }}">
+                                            <a href="{{ route('sales.receipt', $data->sales_id) }}" 
+                                                class="btn btn-info btn-sm"
+                                                target="_blank"> {{-- Add target="_blank" --}}
+                                                View
+                                            </a>
+                                        </td>
                                     @else
                                     <td>{{ $data->product_name }}</td>
-                                    <td>{{ $data->category_name }}</td>
                                     <td>{{ $data->sales_quantity }}</td>
                                     <td>{{ number_format($data->sale_price_per_unit, 2) }}</td>
                                     <td>{{ number_format($data->amount, 2) }}</td>
@@ -466,6 +468,13 @@ $(document).ready(function() {
                                 </td>
                                 <td>
                                     ${returnButton}
+                                </td>
+                                <td>
+                                    <a href="{{ route('sales.receipt', $data->sales_id) }}" 
+                                        class="btn btn-info btn-sm"
+                                        target="_blank"> {{-- Add target="_blank" --}}
+                                        View
+                                    </a>
                                 </td>
                             </tr>
                         `);

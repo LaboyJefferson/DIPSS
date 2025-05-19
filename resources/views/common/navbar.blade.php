@@ -329,8 +329,14 @@
         <li class="{{ Request::routeIs('show_profile') ? 'active' : '' }}">
             <a href="{{ route('show_profile') }}"><i class="fa-solid fa-user-shield"></i> PROFILE</a>
         </li>
+        <li class="{{ Request::routeIs('sales.dashboard') ? 'active' : '' }}">
+            <a href="{{ route('sales.dashboard') }}"><i class="fa-solid fa-chart-line"></i> DASHBOARD</a>
+        </li>
         <li class="{{ Request::routeIs('product_sale_price_table') ? 'active' : '' }}">
-            <a href="{{ route('product_sale_price_table') }}"><i class="fa-solid fa-tags"></i> PRODUCT PRICES</a>
+            <a href="{{ route('product_sale_price_table') }}"><i class="fa-solid fa-tags"></i> PRICING</a>
+        </li>
+        <li class="{{ Request::routeIs('sales.create') ? 'active' : '' }}">
+            <a href="{{ route('sales.create') }}"><i class="fa-solid fa-tags"></i> POS TERMINAL</a>
         </li>
         <li class="{{ Request::routeIs('sales_table') ? 'active' : '' }}">
             <a href="{{ route('sales_table') }}"><i class="fa-solid fa-tags"></i> SALES</a>

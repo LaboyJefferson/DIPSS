@@ -72,7 +72,14 @@
         font-size: 12px;
         line-height: 20px; /* Center the number inside the circle */
     }
+    .form-control {
+        max-width: 120px;
+    }
 
+    .selling-price {
+        display: inline-block;
+        min-width: 80px;
+    }
     
 </style>
 
@@ -128,60 +135,55 @@
 
             <!-- Product Price Table -->
             <div class="mt-5">
-                    <table class="table mt-3">
-                        <thead>
+                <table class="table mt-3">
+                    <thead>
+                        <tr>
+                            <th>Product No.</th>
+                            <th>Image</th>
+                            <th>Name</th>
+                            <th>Purchase Price</th>
+                            <th>Profit Margin (%)</th>
+                            <th>Tax Rate (%)</th>
+                            <th>Selling Price</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($productJoined as $product)
                             <tr>
-                                <th>Product No.</th>
-                                <th>Image</th>
-                                <th>Name</th>
-                                <th>Current Price</th>
-                                <th>New Price</th>
-                                <th>Action</th>
+                                <td>{{ $product->product_id }}</td>
+                                <td><!-- image code remains same --></td>
+                                <td>{{ $product->product_name }}</td>
+                                <td>₱{{ number_format($product->purchase_price, 2) }}</td>
+                                <form method="POST" action="{{ route('product_sale_price') }}">
+                                    @csrf
+                                    <td>
+                                        <input type="hidden" name="productID" value="{{ $product->product_id }}">
+                                        <input type="number" step="0.01" min="0" max="100" 
+                                            name="profit_margin" class="form-control" 
+                                            value="{{ number_format($product->profit_margin * 100) }}">
+                                    </td>
+                                    <td>
+                                        <input type="number" step="0.01" min="0" max="100" 
+                                            name="tax_rate" class="form-control" 
+                                            value="{{ number_format($product->tax_rate * 100) }}">
+                                    </td>
+                                    <td>
+                                        ₱<span class="selling-price" 
+                                            data-purchase-price="{{ $product->purchase_price }}">
+                                            {{ number_format($product->sale_price_per_unit, 2) }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button type="submit" class="btn btn-light">
+                                            <strong><i class="fa-solid fa-floppy-disk"></i> Save</strong>
+                                        </button>
+                                    </td>
+                                </form>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($productJoined as $product)
-                                <tr>
-                                    <td>{{ $product->product_id }}</td>
-                                    <td>
-                                        @if ($product->image_url)
-                                            <img 
-                                                src="{{ asset('storage/userImage/' . $product->image_url) }}" 
-                                                alt="Product Image" 
-                                                class="img-thumbnail" 
-                                                style="width: 50px; height: 50px; object-fit: cover;">
-                                        @else
-                                            <div 
-                                                class="img-thumbnail d-flex justify-content-center align-items-center" 
-                                                style="width: 50px; height: 50px; object-fit: cover;">
-                                                <i class="fa-solid fa-box text-muted" style="font-size: 24px;"></i>
-                                            </div>
-                                        @endif
-                                    </td>
-                                    <td>{{ $product->product_name }}</td>
-                                    <td>
-                                        @if($product->sale_price_per_unit)
-                                            ₱{{ number_format($product->sale_price_per_unit, 2) }}
-                                        @else
-                                            <span class="text-muted">No price set</span>
-                                        @endif
-                                    </td>
-                                    <form method="POST" action="{{ route('product_sale_price') }}">
-                                        @csrf
-                                        <td>
-                                            <input type="hidden" name="productID" value="{{ $product->product_id }}">
-                                            <input type="number" min="1" name="productPrice" class="form-control" placeholder="Enter price">
-                                        </td>
-                                        <td>
-                                            <button type="submit" class="btn btn-light">
-                                                <strong><i class="fa-solid fa-floppy-disk"></i> Save</strong>
-                                            </button>
-                                        </td>
-                                    </form>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         </div>
     </main>
@@ -189,6 +191,33 @@
 @else
     <h1 class="alert alert-danger mt-2">Sorry, you do not have access to this page. Please go <button onclick="window.history.back()" class="btn btn-secondary">← Back</button>.</h1>
 @endif
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('form').forEach(form => {
+        const purchasePrice = parseFloat(form.querySelector('[data-purchase-price]').dataset.purchasePrice);
+        const profitInput = form.querySelector('[name="profit_margin"]');
+        const taxInput = form.querySelector('[name="tax_rate"]');
+        const sellingPriceSpan = form.querySelector('.selling-price');
 
+        function calculateSellingPrice() {
+            const profit = parseFloat(profitInput.value) || 0;
+            const tax = parseFloat(taxInput.value) || 0;
+            
+            const sellingPrice = purchasePrice * 
+                               (1 + profit/100) * 
+                               (1 + tax/100);
+            
+            sellingPriceSpan.textContent = sellingPrice.toFixed(2);
+        }
+
+        profitInput.addEventListener('input', calculateSellingPrice);
+        taxInput.addEventListener('input', calculateSellingPrice);
+        
+        // Initial calculation
+        calculateSellingPrice();
+    });
+});
+</script>
 
 @endsection

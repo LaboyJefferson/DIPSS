@@ -145,12 +145,19 @@ Route::get('order_status_filter', [PurchaseController::class, 'orderStatusFilter
 
 use App\Http\Controllers\SalesController;
 Route::resource('sales', SalesController::class);
+Route::get('dashboard', [SalesController::class, 'dashboard'])->name('sales.dashboard');
+Route::post('sales', [SalesController::class, 'store'])->name('sales.store');
 Route::get('sales_table', [SalesController::class, 'index'])->name('sales_table');
 Route::get('create', [SalesController::class, 'create'])->name('sale_product');
 Route::post('fetch-product', [SalesController::class, 'fetchProduct'])->name('fetch.product');
 Route::get('search', [SalesController::class, 'search'])->name('sales.search');
 Route::get('product_sale_price_table', [SalesController::class, 'producSalePriceTable'])->name('product_sale_price_table');
 Route::post('product_sale_price', [SalesController::class, 'productSalePrice'])->name('product_sale_price');
+Route::get('pos_terminal', [SalesController::class, 'create'])->name('sale_product');
+Route::get('/sales/table', [SalesController::class, 'salesTable'])->name('sales.table');
+Route::get('/sales/{id}/receipt', [SalesController::class, 'showReceipt'])
+     ->name('sales.receipt')
+     ->middleware('auth');
 
 //filter sale price table
 Route::get('filter_product_name_sale', [SalesController::class, 'productNameFilterSale'])->name('filter_product_name_sale');

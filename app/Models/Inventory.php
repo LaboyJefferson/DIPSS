@@ -17,11 +17,9 @@ class Inventory extends Authenticatable
      *
      * @var array<int, string>
      */
-
-     // If you want to change table name change 'reservation'
     protected $table = 'inventory';
-    // Primary Key can be change here('id')
     public $primaryKey = 'inventory_id';
+    
     protected $fillable = [
         'inventory_id',
         'purchase_price_per_unit', 
@@ -31,22 +29,26 @@ class Inventory extends Authenticatable
         'reorder_level',
         'updated_at',
         'product_id',
+        'profit_margin',    // Added
+        'tax_rate'          // Added
     ];
 
     public function product()
     {
         return $this->belongsTo(Product::class, 'product_id');
     }
+    
     public function stockroom()
     {
         return $this->belongsTo(Stockroom::class, 'stockroom_id');
     }
+    
     public function stock_transfer()
     {
         return $this->belongsTo(StockTransfer::class, 'stock_transfer_id');
     }
+    
     public function audits() {
         return $this->hasMany(InventoryAudit::class, 'audit_id');
     }
-
 }
