@@ -154,7 +154,7 @@
         <li class="{{ Request::routeIs('inventory_table') ? 'active' : '' }}">
             <a href="{{ route('inventory_table') }}"><i class="fa-solid fa-warehouse"></i> INVENTORY</a>
         </li><li class="{{ Request::routeIs('inventory.audit.logs') ? 'active' : '' }}">
-            <a href="{{ route('inventory.audit.logs') }}"><i class="fa-solid fa-warehouse"></i> AUDIT LOGS</a>
+            <a href="{{ route('inventory.audit.logs') }}"><i class="fa-solid fa-warehouse"></i> PRODUCT DISCREPANCIES</a>
         </li>
         <li>
             <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
@@ -194,10 +194,26 @@
         <li class="{{ Request::routeIs('show_profile') ? 'active' : '' }}">
             <a href="{{ route('show_profile') }}"><i class="fa-solid fa-user-shield"></i> PROFILE</a>
         </li>
-        <li class="{{ Request::routeIs('purchase_table') ? 'active' : '' }}">
-            <a href="{{ route('purchase_table') }}"><i class="fa-solid fa-money-bill"></i> PRODUCTS</a>
+        <li class="
+            {{ 
+                Request::routeIs('supplier_list') || 
+                Request::routeIs('supplier_info') ||
+                Request::routeIs('create_supplier') ||
+                Request::routeIs('create_product')
+                ? 'active' : '' 
+            }}">
+            <a href="{{ route('supplier_list') }}"><i class="fa-solid fa-user-shield"></i> SUPPLIERS</a>
         </li>
-        <li class="{{ Request::routeIs('purchase_order') ? 'active' : '' }}">
+        <li class="{{ Request::routeIs('purchase_table') ? 'active' : '' }}">
+            <a href="{{ route('purchase_table') }}"><i class="fa-solid fa-retweet"></i> REORDER</a>
+        </li>
+        <li class="
+            {{ 
+                Request::routeIs('purchase_order') ||
+                Request::routeIs('edit_order') ||
+                Request::routeIs('create_purchase_order')
+                ? 'active' : '' 
+            }}">
             <a href="{{ route('purchase_order') }}"><i class="fa-solid fa-cart-shopping"></i> ORDERS</a>
         </li>
         <li>
